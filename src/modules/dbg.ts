@@ -1,8 +1,11 @@
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { ChildProcessWithoutNullStreams, exec, spawn } from "child_process";
 import { endianness } from "os";
 import path from "path";
+import { stdout } from "process";
 
 const cdb32 = path.resolve(__dirname, '..', '..', 'bin', 'cdb32.exe')
+const cdb64 = path.resolve(__dirname, '..', '..', 'bin', 'cdb64.exe')
+const tlist = path.resolve(__dirname, '..', '..', 'bin', 'tlist.exe')
 
 interface IModules {
   baseAddr: number
@@ -73,7 +76,6 @@ class Memory {
 
   public async module (modulename = this.processName) {
     const modules = await this.modules()
-    console.log(modules)
     return modules.find(module => module.name === modulename)
   }
 
@@ -108,8 +110,19 @@ class Memory {
   }
 }
 
-export function attach (processName: string) {  
-  const dbg = spawn(cdb32, ['-pvr', '-pn', processName])
+function is64Bit (processName: string) {
+  return new Promise<boolean> (resolve => {
+    exec(`${tlist} -w "${processName}"`, (err, stdout) => {
+      const [, platform] = stdout.match(/^(\d{2})/) ?? []
+      
+      resolve(platform === '64')
+    })
+  })
+}
+
+export async function attach (processName: string) {
+  const b64 = await is64Bit(processName)
+  const dbg = spawn(b64 ? cdb64 : cdb32, ['-pvr', '-pn', processName])
 
   return new Promise<Memory> (resolve => {
     dbg.stdout.on('data', (data: Buffer) => {
