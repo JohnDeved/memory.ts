@@ -2,14 +2,22 @@ import { attach, DataTypes } from "./modules/dbg"
 
 
 async function main () {
-  const memory = await attach('Tap Dungeon.exe')
-  const baseAddress = await memory.baseAddress()
+  const process = await attach('Tap Dungeon.exe')
+  const baseAddress = await process.baseAddress()
 
-  const pointer = await memory.read(DataTypes.dword, baseAddress + 0x2F0DD8)
-  const moneyAddress = await memory.read(DataTypes.dword, pointer + 0x24)
-  const money = await memory.read(DataTypes.double, moneyAddress + 0x8)
-  console.log(pointer.toString(16), moneyAddress.toString(16), money)
+  const moneyAddress = await process.address(process.processName, 0x2F0DD8, 0x24, 0x8)
+  const money = await process.read(DataTypes.double, moneyAddress)
+  
+  const healthAddress = await process.address(process.processName, 0x2F0DD8, 0xFC, 0x2C, 0x5D0)
+  const health = await process.read(DataTypes.double, healthAddress)
 
-  memory.detach()
+  console.log({ money, health })
+
+  
+  setInterval(() => {
+    process.write(DataTypes.double, healthAddress, '0')
+  }, 100)
+
+  // process.detach()
 }
 main()

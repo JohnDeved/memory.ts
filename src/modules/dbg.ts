@@ -1,7 +1,5 @@
 import { ChildProcessWithoutNullStreams, exec, spawn } from "child_process";
-import { endianness } from "os";
 import path from "path";
-import { stdout } from "process";
 
 const cdb32 = path.resolve(__dirname, '..', '..', 'bin', 'cdb32.exe')
 const cdb64 = path.resolve(__dirname, '..', '..', 'bin', 'cdb64.exe')
@@ -27,7 +25,7 @@ export enum DataTypes {
 }
 
 class Memory {
-  constructor (private dbg: ChildProcessWithoutNullStreams, private processName: string) {}
+  constructor (private dbg: ChildProcessWithoutNullStreams, public processName: string) {}
 
   public read (type: DataTypes.dword, address: number): Promise<number>
   public read (type: DataTypes.double, address: number): Promise<number>
@@ -67,6 +65,32 @@ class Memory {
         name: name.trim()
       }
     })
+  }
+
+  public async address (startModule: string, ...offsets: number[]): Promise<number>
+  public async address (startAddress: number, ...offsets: number[]): Promise<number>
+  public async address (startAddress: number | string, ...offsets: number[]) {
+    let address = 0
+
+    if (typeof startAddress === 'number') {
+      address += startAddress
+    }
+
+    if (typeof startAddress === 'string') {
+      address += await this.baseAddress(startAddress) ?? 0
+    }
+
+    for (const [i, offset] of offsets.entries()) {
+      address += offset
+
+      if (i + 1 === offsets.length) {
+        break
+      }
+
+      address = await this.read(DataTypes.dword, address)
+    }
+
+    return address
   }
   
   public detach () {
