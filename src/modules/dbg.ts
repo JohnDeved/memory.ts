@@ -1,5 +1,5 @@
-import { ChildProcessWithoutNullStreams, exec, spawn } from "child_process";
-import path from "path";
+import { ChildProcessWithoutNullStreams, exec, spawn } from 'child_process'
+import path from 'path'
 
 const cdb32 = path.resolve(__dirname, '..', '..', 'bin', 'cdb32.exe')
 const cdb64 = path.resolve(__dirname, '..', '..', 'bin', 'cdb64.exe')
@@ -25,14 +25,14 @@ export enum DataTypes {
 }
 
 class Memory {
-  constructor (private dbg: ChildProcessWithoutNullStreams, public processName: string) {}
+  constructor (private readonly dbg: ChildProcessWithoutNullStreams, public processName: string) {}
 
   public read (type: DataTypes.dword, address: number): Promise<number>
   public read (type: DataTypes.double, address: number): Promise<number>
   public read (type: DataTypes, address: number): Promise<string>
   public async read (type: DataTypes, address: number) {
     const hexAddress = address.toString(16)
-  
+
     const text = await this.sendCommand(`d${type} ${hexAddress} L 1`, [hexAddress])
     const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
     const [, res] = regex.exec(text) ?? []
@@ -47,10 +47,10 @@ class Memory {
 
     return res
   }
-  
+
   public async write (type: DataTypes, address: number, value: string) {
     const hexAddress = address.toString(16)
-  
+
     await this.sendCommand(`e${type} ${hexAddress} ${value}`)
   }
 
@@ -59,9 +59,9 @@ class Memory {
     return [...text.matchAll(/^(\w{6,16}) (\w{8,16})\s+(\w+) (.+)$/gm)].map(moduleMatch => {
       const [, baseAddr, endAddr, module, name] = moduleMatch
       return {
-        baseAddr: parseInt(baseAddr, 16), 
-        endAddr: parseInt(endAddr, 16), 
-        module: module.trim(), 
+        baseAddr: parseInt(baseAddr, 16),
+        endAddr: parseInt(endAddr, 16),
+        module: module.trim(),
         name: name.trim()
       }
     })
@@ -92,7 +92,7 @@ class Memory {
 
     return address
   }
-  
+
   public detach () {
     this.sendCommand('.detach')
     this.sendCommand('q')
@@ -110,10 +110,10 @@ class Memory {
     return module?.baseAddr
   }
 
-  private sendCommand (cmd: string, expect: string[] = ['0:000>'], collect?: true) {
-    this.dbg.stdin.write(cmd + '\n')
+  private async sendCommand (cmd: string, expect: string[] = ['0:000>'], collect?: true) {
+    this.dbg.stdin.write(`${cmd}\n`)
 
-    return new Promise<string>(resolve => {
+    return await new Promise<string>(resolve => {
       const listen = (exp: string[], collection = '') => {
         this.dbg.stdout.once('data', (data: Buffer) => {
           collection += data.toString()
@@ -134,11 +134,11 @@ class Memory {
   }
 }
 
-function is64Bit (processName: string) {
-  return new Promise<boolean> (resolve => {
-    exec(`${tlist} -w "${processName}"`, (err, stdout) => {
+async function is64Bit (processName: string) {
+  return await new Promise<boolean>(resolve => {
+    exec(`${tlist} -w "${processName}"`, (_, stdout) => {
       const [, platform] = stdout.match(/^(\d{2})/) ?? []
-      
+
       resolve(platform === '64')
     })
   })
@@ -148,7 +148,7 @@ export async function attach (processName: string) {
   const b64 = await is64Bit(processName)
   const dbg = spawn(b64 ? cdb64 : cdb32, ['-pvr', '-pn', processName])
 
-  return new Promise<Memory> (resolve => {
+  return await new Promise<Memory>(resolve => {
     dbg.stdout.on('data', (data: Buffer) => {
       const text = data.toString()
       if (text.includes('0:000>')) {
