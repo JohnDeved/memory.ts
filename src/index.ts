@@ -1,18 +1,21 @@
-import { attach, DataTypes } from './modules/dbg'
+import { attach, DataTypes } from './modules/debugger'
 
 async function main () {
   const process = await attach('Tap Dungeon.exe')
 
   const moneyAddress = await process.address(process.processName, 0x2F0DD8, 0x24, 0x8)
-  const money = await process.read(DataTypes.double, moneyAddress)
+  const [money] = await process.memory(moneyAddress)
 
-  const healthAddress = await process.address(process.processName, 0x2F0DD8, 0xFC, 0x2C, 0x5D0)
-  const health = await process.read(DataTypes.double, healthAddress)
+  for (let index = 0; index < 1000; index++) {
+    console.time('write')
+    await money.double(index)
+    console.timeEnd('write')
 
-  console.log({ money, health })
+    console.time('read')
+    await money.double()
+    console.timeEnd('read')
+  }
 
-  process.write(DataTypes.double, healthAddress, 0)
-
-  // process.detach()
+  process.detach()
 }
 main()
