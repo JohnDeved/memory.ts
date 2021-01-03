@@ -1,5 +1,6 @@
 import { ChildProcessWithoutNullStreams, exec, spawn } from 'child_process'
 import path from 'path'
+import { types } from 'util'
 
 const cdb32 = path.resolve(__dirname, '..', '..', 'bin', 'cdb32.exe')
 const cdb64 = path.resolve(__dirname, '..', '..', 'bin', 'cdb64.exe')
@@ -13,23 +14,41 @@ interface IModules {
 }
 
 export enum DataTypes {
-  ascii = 'a',
   byte = 'b',
   byte2 = 'w',
   byte4 = 'd',
   byte8 = 'q',
   dword = 'p',
-  double = 'D',
+
   float = 'f',
+  double = 'D',
+
+  ascii = 'a',
   unicode = 'u'
+}
+
+type TNumericDataTypes =
+  | DataTypes.byte
+  | DataTypes.byte2
+  | DataTypes.byte4
+  | DataTypes.byte8
+  | DataTypes.dword
+  | DataTypes.float
+  | DataTypes.double
+
+function isNumericType (type: DataTypes) {
+  return ![DataTypes.unicode, DataTypes.ascii].includes(type)
+}
+
+function isHexType (type: DataTypes) {
+  return ![DataTypes.double, DataTypes.float].includes(type)
 }
 
 class Memory {
   constructor (private readonly dbg: ChildProcessWithoutNullStreams, public processName: string) {}
 
-  public read (type: DataTypes.dword, address: number): Promise<number>
-  public read (type: DataTypes.double, address: number): Promise<number>
-  public read (type: DataTypes, address: number): Promise<string>
+  public async read (type: TNumericDataTypes, address: number): Promise<number>
+  public async read (type: DataTypes, address: number): Promise<string>
   public async read (type: DataTypes, address: number) {
     const hexAddress = address.toString(16)
 
@@ -37,21 +56,27 @@ class Memory {
     const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
     const [, res] = regex.exec(text) ?? []
 
-    if (type === DataTypes.double) {
-      return Number(res)
-    }
+    if (isNumericType(type)) {
+      if (isHexType(type)) {
+        return parseInt(res, 16)
+      }
 
-    if (type === DataTypes.dword) {
-      return parseInt(res, 16)
+      return Number(res)
     }
 
     return res
   }
 
-  public async write (type: DataTypes, address: number, value: string) {
+  public async write (type: TNumericDataTypes, address: number, value: number): Promise<string>
+  public async write (type: DataTypes, address: number, value: string): Promise<string>
+  public async write (type: DataTypes, address: number, value: string | number) {
     const hexAddress = address.toString(16)
 
-    await this.sendCommand(`e${type} ${hexAddress} ${value}`)
+    if (isHexType(type)) {
+      return await this.sendCommand(`e${type} ${hexAddress} ${value.toString(16)}`)
+    }
+
+    return await this.sendCommand(`e${type} ${hexAddress} ${value}`)
   }
 
   public async modules (): Promise<IModules[]> {

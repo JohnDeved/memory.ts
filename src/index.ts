@@ -11,9 +11,7 @@ async function main () {
 
   console.log({ money, health })
 
-  setInterval(() => {
-    process.write(DataTypes.double, healthAddress, '0')
-  }, 100)
+  process.write(DataTypes.double, healthAddress, 0)
 
   // process.detach()
 }
