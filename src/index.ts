@@ -1,24 +1,24 @@
-import { attach } from './modules/debugger'
+import { attach, DataTypes } from './modules/debugger'
 
 async function main () {
   const process = await attach('Tap Dungeon.exe')
-  console.log('idk')
   const [money, moneyAddress] = await process.memory(process.processName, 0x2F0DD8, 0x24, 0x8)
-  console.log('idk2')
 
-  console.time('10000 writes')
-  for (let index = 0; index < 10000; index++) {
-    await money.double(index)
-  }
-  console.timeEnd('10000 writes')
+  let time = Date.now() + 1000
+  let index = 0
+  for (; time >= Date.now(); index++) await money.double(index)
+  console.log('write', index, '/ sec')
 
-  console.time('10000 reads')
-  for (let index = 0; index < 10000; index++) {
-    await money.double()
-  }
-  console.timeEnd('10000 reads')
+  time = Date.now() + 1000
+  index = 0
+  for (; time >= Date.now(); index++) await money.double()
+  console.log('read', index, '/ sec')
 
-  console.log(await money.double(), moneyAddress)
+  time = Date.now() + 1000
+  index = 0
+  for (; time >= Date.now(); index++) process.readSync(DataTypes.double, moneyAddress)
+  console.log('readSync', index, '/ sec')
+
   process.detach()
 }
 main()
