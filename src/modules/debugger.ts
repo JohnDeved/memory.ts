@@ -151,13 +151,7 @@ export class Debugger {
   public async memory (startModule: string, ...offsets: number[]): Promise<[memory: TMemory, address: number]>
   public async memory (startAddress: number, ...offsets: number[]): Promise<[memory: TMemory, address: number]>
   public async memory (addr: number | string, ...offsets: number[]) {
-    let address = 0
-
-    if (typeof addr === 'string' || offsets.length > 0) {
-      address = await this.address(addr as string, ...offsets)
-    } else {
-      address = addr
-    }
+    const address = await this.address(addr as string, ...offsets)
 
     const proxy = new Proxy<TMemory>({} as any, {
       get: (_, type: TDataTypes) => async (value?: string | number) => {
