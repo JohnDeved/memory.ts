@@ -1,9 +1,8 @@
-import { ChildProcessWithoutNullStreams, execFile, spawn } from 'child_process'
 import { Worker } from 'worker_threads'
 import path from 'path'
-import { readFileSync, writeFileSync } from 'fs'
-import { stringify } from 'querystring'
+import { readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { EventEmitter } from 'events'
+import { out } from '../config'
 
 const server = path.resolve(__dirname, 'debuggerServer.js')
 
@@ -76,8 +75,10 @@ function isHexType (type: DataTypes) {
 export class Debugger {
   constructor (
     private readonly server: ReturnType<typeof initServer>,
+    private readonly pid: number,
     public processName: string,
-    public is64bit: boolean) {}
+    public is64bit: boolean
+  ) {}
 
   public async read (type: TNumericDataTypes, address: number): Promise<number>
   public async read (type: TStringDataTypes, address: number): Promise<string>
@@ -86,6 +87,27 @@ export class Debugger {
     const hexAddress = address.toString(16)
 
     const text = await this.sendCommand(`d${type} ${hexAddress} L 1`, [hexAddress])
+    const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
+    const [, res] = regex.exec(text) ?? []
+
+    if (isNumericType(type)) {
+      if (isHexType(type)) {
+        return parseInt(res.replace(/`/g, ''), 16)
+      }
+
+      return Number(res)
+    }
+
+    return res
+  }
+
+  public readSync (type: TNumericDataTypes, address: number): number
+  public readSync (type: TStringDataTypes, address: number): string
+  public readSync (type: DataTypes, address: number): string | number
+  public readSync (type: DataTypes, address: number) {
+    const hexAddress = address.toString(16)
+
+    const text = this.sendCommandSync(`d${type} ${hexAddress} L 1`, [hexAddress])
     const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
     const [, res] = regex.exec(text) ?? []
 
@@ -179,7 +201,10 @@ export class Debugger {
   }
 
   public detach () {
-    this.sendCommand('qd')
+    this.sendCommand('qd', ['quit:']).then(() => {
+      this.server.worker.terminate()
+      unlinkSync(`${out}_${this.pid}`)
+    })
   }
 
   public async baseAddress (): Promise<number>
@@ -189,7 +214,6 @@ export class Debugger {
     return module?.baseAddr
   }
 
-  // eslint-disable-next-line @typescript-eslint/promise-function-async
   private sendCommand (cmd: string, expect?: string[], collect?: true) {
     this.server.worker.postMessage({ cmd, expect, collect })
 
@@ -197,10 +221,21 @@ export class Debugger {
       this.server.events.once(cmd, resolve)
     })
   }
+
+  private sendCommandSync (cmd: string, expect?: string[], collect?: true) {
+    const io = `${out}_${this.pid}`
+    this.server.worker.postMessage({ cmd, expect, collect, sync: true })
+
+    let read = ''
+    while (!read) read = readFileSync(io, { encoding: 'ascii' })
+    writeFileSync(io, '')
+    return read
+  }
 }
 
 function initServer (processName: string) {
-  const worker = new Worker(server, { workerData: processName }).on('error', console.log)
+  console.log('called init')
+  const worker = new Worker(server, { workerData: processName }).on('error', console.error)
 
   const events = new EventEmitter()
   worker.on('message', ({ event, data }: { event: string, data: any }) => {
@@ -214,8 +249,8 @@ export async function attach (processName: string) {
   const server = initServer(processName)
 
   return await new Promise<Debugger>(resolve => {
-    server.events.once('init', (b64: boolean) => {
-      resolve(new Debugger(server, processName, b64))
+    server.events.once('init', ({ b64, pid }: { b64: boolean, pid: number }) => {
+      resolve(new Debugger(server, pid, processName, b64))
     })
   })
 }
