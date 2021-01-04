@@ -1,5 +1,4 @@
-import { ChildProcess, execFile, execFileSync } from 'child_process'
-import { readSync } from 'fs'
+import { ChildProcessWithoutNullStreams, execFile, spawn } from 'child_process'
 import path from 'path'
 
 const cdb32 = path.resolve(__dirname, '..', '..', 'bin', 'cdb32.exe')
@@ -57,7 +56,7 @@ type TStringDataTypes =
 type TMemory = {
   [key in TNumericTypes]: (value: number) => Promise<void>
 } & {
-  [key in TStringTypes]: (value: string) => Promise<string>
+  [key in TStringTypes]: (value: string) => Promise<void>
 } & {
   [key in TNumericTypes]: () => Promise<number>
 } & {
@@ -73,7 +72,7 @@ function isHexType (type: DataTypes) {
 }
 
 export class Debugger {
-  constructor (private readonly dbg: ChildProcess, public processName: string, public is64bit: boolean) {}
+  constructor (private readonly dbg: ChildProcessWithoutNullStreams, public processName: string, public is64bit: boolean) {}
 
   public async read (type: TNumericDataTypes, address: number): Promise<number>
   public async read (type: TStringDataTypes, address: number): Promise<string>
@@ -87,7 +86,7 @@ export class Debugger {
 
     if (isNumericType(type)) {
       if (isHexType(type)) {
-        return parseInt(res, 16)
+        return parseInt(res.replace(/`/g, ''), 16)
       }
 
       return Number(res)
@@ -192,11 +191,11 @@ export class Debugger {
   }
 
   private async sendCommand (cmd: string, expect: string[] = ['0:000>'], collect?: true) {
-    this.dbg.stdin?.write(`${cmd}\n`)
+    this.dbg.stdin.write(`${cmd}\n`)
 
     return await new Promise<string>(resolve => {
       const listen = (exp: string[], collection = '') => {
-        this.dbg.stdout?.once('data', (data: Buffer) => {
+        this.dbg.stdout.once('data', (data: Buffer) => {
           collection += data.toString()
 
           if (exp.map(e => !collection.includes(e)).filter(Boolean).length === 0) {
@@ -227,13 +226,13 @@ async function is64Bit (processName: string) {
 
 export async function attach (processName: string) {
   const b64 = await is64Bit(processName)
-  const dbg = execFile(b64 ? cdb64 : cdb32, ['-pvr', '-pn', processName])
+  const dbg = spawn(b64 ? cdb64 : cdb32, ['-pvr', '-pn', processName])
 
   return await new Promise<Debugger>(resolve => {
-    dbg.stdout?.on('data', (data: Buffer) => {
+    dbg.stdout.on('data', (data: Buffer) => {
       const text = data.toString()
       if (text.includes('0:000>')) {
-        dbg.stdout?.removeAllListeners('data')
+        dbg.stdout.removeAllListeners('data')
         resolve(new Debugger(dbg, processName, b64))
       }
     })
