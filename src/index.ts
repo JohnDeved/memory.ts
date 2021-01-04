@@ -2,7 +2,9 @@ import { attach } from './modules/debugger'
 
 async function main () {
   const process = await attach('Tap Dungeon.exe')
+  console.log('idk')
   const [money, moneyAddress] = await process.memory(process.processName, 0x2F0DD8, 0x24, 0x8)
+  console.log('idk2')
 
   console.time('10000 writes')
   for (let index = 0; index < 10000; index++) {
