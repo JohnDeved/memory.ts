@@ -1,9 +1,11 @@
 import { ChildProcessWithoutNullStreams, execFile, spawn } from 'child_process'
+import { Worker } from 'worker_threads'
 import path from 'path'
+import { readFileSync, writeFileSync } from 'fs'
+import { stringify } from 'querystring'
+import { EventEmitter } from 'events'
 
-const cdb32 = path.resolve(__dirname, '..', '..', 'bin', 'cdb32.exe')
-const cdb64 = path.resolve(__dirname, '..', '..', 'bin', 'cdb64.exe')
-const tlist = path.resolve(__dirname, '..', '..', 'bin', 'tlist.exe')
+const server = path.resolve(__dirname, 'debuggerServer.js')
 
 interface IModules {
   baseAddr: number
@@ -72,7 +74,10 @@ function isHexType (type: DataTypes) {
 }
 
 export class Debugger {
-  constructor (private readonly dbg: ChildProcessWithoutNullStreams, public processName: string, public is64bit: boolean) {}
+  constructor (
+    private readonly server: ReturnType<typeof initServer>,
+    public processName: string,
+    public is64bit: boolean) {}
 
   public async read (type: TNumericDataTypes, address: number): Promise<number>
   public async read (type: TStringDataTypes, address: number): Promise<string>
@@ -184,51 +189,33 @@ export class Debugger {
     return module?.baseAddr
   }
 
-  private async sendCommand (cmd: string, expect: string[] = ['0:000>'], collect?: true) {
-    this.dbg.stdin.write(`${cmd}\n`)
+  // eslint-disable-next-line @typescript-eslint/promise-function-async
+  private sendCommand (cmd: string, expect?: string[], collect?: true) {
+    this.server.worker.postMessage({ cmd, expect, collect })
 
-    return await new Promise<string>(resolve => {
-      const listen = (exp: string[], collection = '') => {
-        this.dbg.stdout.once('data', (data: Buffer) => {
-          collection += data.toString()
-
-          if (exp.map(e => !collection.includes(e)).filter(Boolean).length === 0) {
-            return resolve(collection)
-          }
-
-          if (collect) {
-            return listen(exp, collection)
-          }
-
-          listen(exp)
-        })
-      }
-      listen(expect)
+    return new Promise<string>(resolve => {
+      this.server.events.once(cmd, resolve)
     })
   }
 }
 
-async function is64Bit (processName: string) {
-  return await new Promise<boolean>(resolve => {
-    execFile(tlist, ['-w', processName], (_, stdout) => {
-      const [, platform] = stdout.match(/^(\d{2})/) ?? []
+function initServer (processName: string) {
+  const worker = new Worker(server, { workerData: processName }).on('error', console.log)
 
-      resolve(platform === '64')
-    })
+  const events = new EventEmitter()
+  worker.on('message', ({ event, data }: { event: string, data: any }) => {
+    events.emit(event, data)
   })
+
+  return { worker, events }
 }
 
 export async function attach (processName: string) {
-  const b64 = await is64Bit(processName)
-  const dbg = spawn(b64 ? cdb64 : cdb32, ['-pvr', '-pn', processName])
+  const server = initServer(processName)
 
   return await new Promise<Debugger>(resolve => {
-    dbg.stdout.on('data', (data: Buffer) => {
-      const text = data.toString()
-      if (text.includes('0:000>')) {
-        dbg.stdout.removeAllListeners('data')
-        resolve(new Debugger(dbg, processName, b64))
-      }
+    server.events.once('init', (b64: boolean) => {
+      resolve(new Debugger(server, processName, b64))
     })
   })
 }
