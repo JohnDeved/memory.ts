@@ -1,0 +1,58 @@
+
+export interface IModules {
+  baseAddr: number
+  endAddr: number
+  module: string
+  name: string
+}
+
+export enum DataTypes {
+  byte = 'b',
+  byte2 = 'w',
+  byte4 = 'd',
+  byte8 = 'q',
+  dword = 'p',
+  float = 'f',
+  double = 'D',
+
+  ascii = 'a',
+  unicode = 'u'
+}
+
+export type TDataTypes = keyof typeof DataTypes
+
+export type TNumericTypes =
+  | 'byte'
+  | 'byte2'
+  | 'byte4'
+  | 'byte8'
+  | 'dword'
+  | 'float'
+  | 'double'
+
+export type TStringTypes =
+  | 'ascii'
+  | 'unicode'
+
+export type TNumericDataTypes =
+  | DataTypes.byte
+  | DataTypes.byte2
+  | DataTypes.byte4
+  | DataTypes.byte8
+  | DataTypes.dword
+  | DataTypes.float
+  | DataTypes.double
+
+export type TStringDataTypes =
+  | DataTypes.ascii
+  | DataTypes.unicode
+
+export type TMemory = {
+  [key in TNumericTypes]: (value: number) => Promise<void>
+} & {
+  [key in TStringTypes]: (value: string) => Promise<void>
+} & {
+  [key in TNumericTypes]: () => Promise<number>
+} & {
+  [key in TStringTypes]: () => Promise<string>
+}

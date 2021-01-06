@@ -1,68 +1,8 @@
 import { Worker } from 'worker_threads'
-import path from 'path'
 import { readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { EventEmitter } from 'events'
-import { out } from '../config'
-
-const server = path.resolve(__dirname, 'debuggerServer.js')
-
-interface IModules {
-  baseAddr: number
-  endAddr: number
-  module: string
-  name: string
-}
-
-export enum DataTypes {
-  byte = 'b',
-  byte2 = 'w',
-  byte4 = 'd',
-  byte8 = 'q',
-  dword = 'p',
-  float = 'f',
-  double = 'D',
-
-  ascii = 'a',
-  unicode = 'u'
-}
-
-type TDataTypes = keyof typeof DataTypes
-
-type TNumericTypes =
-  | 'byte'
-  | 'byte2'
-  | 'byte4'
-  | 'byte8'
-  | 'dword'
-  | 'float'
-  | 'double'
-
-type TStringTypes =
-  | 'ascii'
-  | 'unicode'
-
-type TNumericDataTypes =
-  | DataTypes.byte
-  | DataTypes.byte2
-  | DataTypes.byte4
-  | DataTypes.byte8
-  | DataTypes.dword
-  | DataTypes.float
-  | DataTypes.double
-
-type TStringDataTypes =
-  | DataTypes.ascii
-  | DataTypes.unicode
-
-type TMemory = {
-  [key in TNumericTypes]: (value: number) => Promise<void>
-} & {
-  [key in TStringTypes]: (value: string) => Promise<void>
-} & {
-  [key in TNumericTypes]: () => Promise<number>
-} & {
-  [key in TStringTypes]: () => Promise<string>
-}
+import { out, server } from './dbg/config'
+import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes } from './dbg/types'
 
 function isNumericType (type: DataTypes) {
   return ![DataTypes.unicode, DataTypes.ascii].includes(type)
@@ -214,17 +154,17 @@ export class Debugger {
     return module?.baseAddr
   }
 
-  private sendCommand (cmd: string, expect?: string[], collect?: true) {
-    this.server.worker.postMessage({ cmd, expect, collect })
+  private sendCommand (command: string, expect?: string[], collect?: true) {
+    this.server.worker.postMessage({ command, expect, collect })
 
     return new Promise<string>(resolve => {
-      this.server.events.once(cmd, resolve)
+      this.server.events.once(command, resolve)
     })
   }
 
-  private sendCommandSync (cmd: string, expect?: string[], collect?: true) {
+  private sendCommandSync (command: string, expect?: string[], collect?: true) {
     const io = `${out}_${this.pid}`
-    this.server.worker.postMessage({ cmd, expect, collect, sync: true })
+    this.server.worker.postMessage({ command, expect, collect, sync: true })
 
     let read = ''
     while (!read) read = readFileSync(io, { encoding: 'ascii' })
@@ -234,7 +174,6 @@ export class Debugger {
 }
 
 function initServer (processName: string) {
-  console.log('called init')
   const worker = new Worker(server, { workerData: processName }).on('error', console.error)
 
   const events = new EventEmitter()
@@ -245,10 +184,10 @@ function initServer (processName: string) {
   return { worker, events }
 }
 
-export async function attach (processName: string) {
+export function attach (processName: string) {
   const server = initServer(processName)
 
-  return await new Promise<Debugger>(resolve => {
+  return new Promise<Debugger>(resolve => {
     server.events.once('init', ({ b64, pid }: { b64: boolean, pid: number }) => {
       resolve(new Debugger(server, pid, processName, b64))
     })
