@@ -1,6 +1,6 @@
 import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes, isHexType, isNumericType, TDbg } from '../dbg/types'
-import { MemorySpec } from '.'
 import { sendCommand } from '../dbg'
+import { MemorySpec } from './spec'
 
 export class Memory extends MemorySpec {
   constructor (
@@ -39,10 +39,10 @@ export class Memory extends MemorySpec {
     const hexAddress = address.toString(16)
 
     if (isHexType(type)) {
-      return void this.sendCommand(`e${type} ${hexAddress} ${value.toString(16)}`)
+      return void await this.sendCommand(`e${type} ${hexAddress} ${value.toString(16)}`)
     }
 
-    return void this.sendCommand(`e${type} ${hexAddress} ${value}`)
+    return void await this.sendCommand(`e${type} ${hexAddress} ${value}`)
   }
 
   public async modules (): Promise<IModules[]> {
