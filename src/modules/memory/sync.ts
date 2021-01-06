@@ -1,147 +1,117 @@
-// import { Worker } from 'worker_threads'
-// import { readFileSync, unlinkSync, writeFileSync } from 'fs'
-// import { EventEmitter } from 'events'
-// import { out, server } from '../dbg/config'
-// import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes } from '../dbg/types'
-// import { MemorySpec } from '.'
+import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes, isHexType } from '../dbg/types'
+import { getOutPath } from '../dbg'
+import { MemorySpec } from './spec'
+import { Worker } from 'worker_threads'
+import { EventEmitter } from 'events'
+import { readFileSync, writeFileSync } from 'fs-extra'
 
-// function isNumericType (type: DataTypes) {
-//   return ![DataTypes.unicode, DataTypes.ascii].includes(type)
-// }
+export class MemorySync extends MemorySpec {
+  constructor (
+    private readonly server: { worker: Worker, events: EventEmitter },
+    public pid: number,
+    public processName: string,
+    public is64bit: boolean
+  ) {
+    super()
+  }
 
-// function isHexType (type: DataTypes) {
-//   return ![DataTypes.double, DataTypes.float].includes(type)
-// }
+  public read (type: TNumericDataTypes, address: number): number
+  public read (type: TStringDataTypes, address: number): string
+  public read (type: DataTypes, address: number): string | number
+  public read (type: DataTypes, address: number) {
+    const hexAddress = this._readPreProcess(address)
+    const text = this.sendCommand(`d${type} ${hexAddress} L 1`, [hexAddress])
+    return this._readPostProcess(type, hexAddress, text)
+  }
 
-// export class MemorySync extends MemorySpec {
-//   constructor (
-//     private readonly server: ReturnType<typeof initServer>,
-//     private readonly pid: number,
-//     public processName: string,
-//     public is64bit: boolean
-//   ) {
-//     super()
-//   }
+  public write (type: TNumericDataTypes, address: number, value: number): void
+  public write (type: TStringDataTypes, address: number, value: string): void
+  public write (type: DataTypes, address: number, value: string | number): void
+  public write (type: DataTypes, address: number, value: string | number) {
+    const hexAddress = this._writePreProcess(address)
 
-//   public async read (type: TNumericDataTypes, address: number): Promise<number>
-//   public async read (type: TStringDataTypes, address: number): Promise<string>
-//   public async read (type: DataTypes, address: number): Promise<string | number>
-//   public async read (type: DataTypes, address: number) {
-//     const hexAddress = address.toString(16)
+    if (isHexType(type)) {
+      return void this.sendCommand(`e${type} ${hexAddress} ${value.toString(16)}`)
+    }
 
-//     const text = await this.sendCommand(`d${type} ${hexAddress} L 1`, [hexAddress])
-//     const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
-//     const [, res] = regex.exec(text) ?? []
+    return void this.sendCommand(`e${type} ${hexAddress} ${value}`)
+  }
 
-//     if (isNumericType(type)) {
-//       if (isHexType(type)) {
-//         return parseInt(res.replace(/`/g, ''), 16)
-//       }
+  public modules (): IModules[] {
+    const text = this.sendCommand('lmn', ['Unloaded', 'modules:'], true)
+    return this._modulesPostProcess(text)
+  }
 
-//       return Number(res)
-//     }
+  public module (modulename = this.processName) {
+    const modules = this.modules()
+    return this._modulePostProcess(modulename, modules)
+  }
 
-//     return res
-//   }
+  public address (startModule: string, ...offsets: number[]): number
+  public address (startAddress: number | string, ...offsets: number[]): number
+  public address (startAddress: number | string, ...offsets: number[]) {
+    let address = 0
 
-//   public async write (type: TNumericDataTypes, address: number, value: number): Promise<void>
-//   public async write (type: TStringDataTypes, address: number, value: string): Promise<void>
-//   public async write (type: DataTypes, address: number, value: string | number): Promise<void>
-//   public async write (type: DataTypes, address: number, value: string | number) {
-//     const hexAddress = address.toString(16)
+    if (typeof startAddress === 'number') {
+      address += startAddress
+    }
 
-//     if (isHexType(type)) {
-//       return void this.sendCommand(`e${type} ${hexAddress} ${value.toString(16)}`)
-//     }
+    if (typeof startAddress === 'string') {
+      address += this.baseAddress(startAddress) ?? 0
+    }
 
-//     return void this.sendCommand(`e${type} ${hexAddress} ${value}`)
-//   }
+    for (const [i, offset] of offsets.entries()) {
+      address += offset
 
-//   public async modules (): Promise<IModules[]> {
-//     const text = await this.sendCommand('lmn', ['Unloaded', 'modules:'], true)
-//     return [...text.matchAll(/^(\w{6,16}) (\w{8,16})\s+(\w+) (.+)$/gm)].map(moduleMatch => {
-//       const [, baseAddr, endAddr, module, name] = moduleMatch
-//       return {
-//         baseAddr: parseInt(baseAddr, 16),
-//         endAddr: parseInt(endAddr, 16),
-//         module: module.trim(),
-//         name: name.trim()
-//       }
-//     })
-//   }
+      if (i + 1 === offsets.length) {
+        break
+      }
 
-//   public async module (modulename = this.processName) {
-//     const modules = await this.modules()
-//     return modules.find(module => module.name === modulename)
-//   }
+      address = this.read(DataTypes.dword, address)
+    }
 
-//   public async address (startModule: string, ...offsets: number[]): Promise<number>
-//   public async address (startAddress: number, ...offsets: number[]): Promise<number>
-//   public async address (startAddress: number | string, ...offsets: number[]) {
-//     let address = 0
+    return address
+  }
 
-//     if (typeof startAddress === 'number') {
-//       address += startAddress
-//     }
+  public memory (address: number): [memory: TMemory, address: number]
+  public memory (startModule: string, ...offsets: number[]): [memory: TMemory, address: number]
+  public memory (startAddress: number, ...offsets: number[]): [memory: TMemory, address: number]
+  public memory (addr: number | string, ...offsets: number[]) {
+    const address = this.address(addr, ...offsets)
 
-//     if (typeof startAddress === 'string') {
-//       address += await this.baseAddress(startAddress) ?? 0
-//     }
+    const proxy = new Proxy<TMemory>({} as any, {
+      get: (_, type: TDataTypes) => async (value?: string | number) => {
+        if (!DataTypes[type]) return
 
-//     for (const [i, offset] of offsets.entries()) {
-//       address += offset
+        if (value) {
+          return this.write(DataTypes[type], address, value)
+        }
 
-//       if (i + 1 === offsets.length) {
-//         break
-//       }
+        return this.read(DataTypes[type], address)
+      }
+    })
 
-//       address = await this.read(DataTypes.dword, address)
-//     }
+    return [proxy, address]
+  }
 
-//     return address
-//   }
+  public detach () {
+    this.sendCommand('qd', ['quit:'])
+  }
 
-//   public async memory (address: number): Promise<[memory: TMemory, address: number]>
-//   public async memory (startModule: string, ...offsets: number[]): Promise<[memory: TMemory, address: number]>
-//   public async memory (startAddress: number, ...offsets: number[]): Promise<[memory: TMemory, address: number]>
-//   public async memory (addr: number | string, ...offsets: number[]) {
-//     const address = await this.address(addr as string, ...offsets)
+  public baseAddress (): number
+  public baseAddress (moduleName: string): number | undefined
+  public baseAddress (moduleName = this.processName) {
+    const module = this.module(moduleName)
+    return module?.baseAddr
+  }
 
-//     const proxy = new Proxy<TMemory>({} as any, {
-//       get: (_, type: TDataTypes) => async (value?: string | number) => {
-//         if (!DataTypes[type]) return
+  public sendCommand (command: string, expect?: string[], collect?: boolean) {
+    const io = getOutPath(this.pid)
+    this.server.worker.postMessage({ command, expect, collect, sync: true })
 
-//         if (value) {
-//           return await this.write(DataTypes[type], address, value)
-//         }
-
-//         return await this.read(DataTypes[type], address)
-//       }
-//     })
-
-//     return [proxy, address]
-//   }
-
-//   public detach () {
-//     this.sendCommand('qd', ['quit:'])
-//     this.server.worker.terminate()
-//     unlinkSync(`${out}_${this.pid}`)
-//   }
-
-//   public async baseAddress (): Promise<number>
-//   public async baseAddress (moduleName: string): Promise<number | undefined>
-//   public async baseAddress (moduleName = this.processName) {
-//     const module = await this.module(moduleName)
-//     return module?.baseAddr
-//   }
-
-//   private sendCommand (command: string, expect?: string[], collect?: boolean) {
-//     const io = `${out}_${this.pid}`
-//     this.server.worker.postMessage({ command, expect, collect, sync: true })
-
-//     let read = ''
-//     while (!read) read = readFileSync(io, { encoding: 'ascii' })
-//     writeFileSync(io, '')
-//     return read
-//   }
-// }
+    let read = ''
+    while (!read) read = readFileSync(io, { encoding: 'ascii' })
+    writeFileSync(io, '')
+    return read
+  }
+}
