@@ -12,6 +12,10 @@ export abstract class MemorySpec {
     return address.toString(16)
   }
 
+  protected _readCommand (type: DataTypes, hexAddress: string): Parameters<MemorySpec['sendCommand']> {
+    return [`d${type} ${hexAddress} L 1`, [hexAddress]]
+  }
+
   protected _readPostProcess (type: DataTypes, hexAddress: string, text: string) {
     const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
     const [, res] = regex.exec(text) ?? []
@@ -31,12 +35,26 @@ export abstract class MemorySpec {
    * write
    */
   public abstract write (type: DataTypes, address: number, value: string | number): Promise<void> | void
+
   protected _writePreProcess = this._readPreProcess
+
+  protected _writeCommand (type: DataTypes, hexAddress: string, value: string | number): Parameters<MemorySpec['sendCommand']> {
+    if (isHexType(type)) {
+      return [`e${type} ${hexAddress} ${value.toString(16)}`]
+    }
+
+    return [`e${type} ${hexAddress} ${value}`]
+  }
 
   /**
    * modules
    */
   public abstract modules (): Promise<IModules[]> | IModules[]
+
+  protected _modulesCommand (): Parameters<MemorySpec['sendCommand']> {
+    return ['lmn', ['Unloaded', 'modules:'], true]
+  }
+
   protected _modulesPostProcess (text: string) {
     return [...text.matchAll(/^(\w{6,16}) (\w{8,16})\s+(\w+) (.+)$/gm)].map(moduleMatch => {
       const [, baseAddr, endAddr, module, name] = moduleMatch
@@ -71,6 +89,10 @@ export abstract class MemorySpec {
    * detach
    */
   public abstract detach (): void
+
+  protected _detachCommand (): Parameters<MemorySpec['sendCommand']> {
+    return ['qd', ['quit:']]
+  }
 
   /**
    * baseAddress

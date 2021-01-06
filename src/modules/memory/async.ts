@@ -18,7 +18,7 @@ export class Memory extends MemorySpec {
   public async read (type: DataTypes, address: number): Promise<string | number>
   public async read (type: DataTypes, address: number) {
     const hexAddress = this._readPreProcess(address)
-    const text = await this.sendCommand(`d${type} ${hexAddress} L 1`, [hexAddress])
+    const text = await this.sendCommand(...this._readCommand(type, hexAddress))
     return this._readPostProcess(type, hexAddress, text)
   }
 
@@ -27,16 +27,11 @@ export class Memory extends MemorySpec {
   public async write (type: DataTypes, address: number, value: string | number): Promise<void>
   public async write (type: DataTypes, address: number, value: string | number) {
     const hexAddress = this._writePreProcess(address)
-
-    if (isHexType(type)) {
-      return void await this.sendCommand(`e${type} ${hexAddress} ${value.toString(16)}`)
-    }
-
-    return void await this.sendCommand(`e${type} ${hexAddress} ${value}`)
+    return void await this.sendCommand(...this._writeCommand(type, hexAddress, value))
   }
 
   public async modules (): Promise<IModules[]> {
-    const text = await this.sendCommand('lmn', ['Unloaded', 'modules:'], true)
+    const text = await this.sendCommand(...this._modulesCommand())
     return this._modulesPostProcess(text)
   }
 
@@ -93,7 +88,7 @@ export class Memory extends MemorySpec {
   }
 
   public detach () {
-    this.sendCommand('qd', ['quit:'])
+    this.sendCommand(...this._detachCommand())
   }
 
   public async baseAddress (): Promise<number>

@@ -20,7 +20,7 @@ export class MemorySync extends MemorySpec {
   public read (type: DataTypes, address: number): string | number
   public read (type: DataTypes, address: number) {
     const hexAddress = this._readPreProcess(address)
-    const text = this.sendCommand(`d${type} ${hexAddress} L 1`, [hexAddress])
+    const text = this.sendCommand(...this._readCommand(type, hexAddress))
     return this._readPostProcess(type, hexAddress, text)
   }
 
@@ -29,16 +29,11 @@ export class MemorySync extends MemorySpec {
   public write (type: DataTypes, address: number, value: string | number): void
   public write (type: DataTypes, address: number, value: string | number) {
     const hexAddress = this._writePreProcess(address)
-
-    if (isHexType(type)) {
-      return void this.sendCommand(`e${type} ${hexAddress} ${value.toString(16)}`)
-    }
-
-    return void this.sendCommand(`e${type} ${hexAddress} ${value}`)
+    return void this.sendCommand(...this._writeCommand(type, hexAddress, value))
   }
 
   public modules (): IModules[] {
-    const text = this.sendCommand('lmn', ['Unloaded', 'modules:'], true)
+    const text = this.sendCommand(...this._modulesCommand())
     return this._modulesPostProcess(text)
   }
 
@@ -95,7 +90,7 @@ export class MemorySync extends MemorySpec {
   }
 
   public detach () {
-    this.sendCommand('qd', ['quit:'])
+    this.sendCommand(...this._detachCommand())
     this.server.worker.terminate()
     unlinkSync(getOutPath(this.pid))
   }
