@@ -1,14 +1,14 @@
-import { ChildProcessWithoutNullStreams } from 'child_process'
 import { writeFileSync } from 'fs-extra'
 import { workerData as processName, parentPort } from 'worker_threads'
 import { getOutPath, initDbg, sendCommand } from '.'
+import { TDbg } from './types'
 
 interface IMessageDate {
   command: string
   expect?: string[]
   collect?: true
   sync?: true
-  dbg: ChildProcessWithoutNullStreams
+  dbg: TDbg
 }
 
 init(processName).then(dbg => {

@@ -1,3 +1,6 @@
+import { ChildProcessWithoutNullStreams } from 'child_process'
+
+export type TDbg = ChildProcessWithoutNullStreams
 
 export interface IModules {
   baseAddr: number
@@ -55,4 +58,12 @@ export type TMemory = {
   [key in TNumericTypes]: () => Promise<number>
 } & {
   [key in TStringTypes]: () => Promise<string>
+}
+
+export function isNumericType (type: DataTypes) {
+  return ![DataTypes.unicode, DataTypes.ascii].includes(type)
+}
+
+export function isHexType (type: DataTypes) {
+  return ![DataTypes.double, DataTypes.float].includes(type)
 }
