@@ -54,6 +54,6 @@ async function main () {
 
   console.log(await moneySync.double(), moneyAddressSync)
 
-  process.detach()
+  processSync.detach()
 }
 main()

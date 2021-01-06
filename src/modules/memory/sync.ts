@@ -3,7 +3,7 @@ import { getOutPath } from '../dbg'
 import { MemorySpec } from './spec'
 import { Worker } from 'worker_threads'
 import { EventEmitter } from 'events'
-import { readFileSync, writeFileSync } from 'fs-extra'
+import { readFileSync, unlinkSync, writeFileSync } from 'fs-extra'
 
 export class MemorySync extends MemorySpec {
   constructor (
@@ -96,6 +96,8 @@ export class MemorySync extends MemorySpec {
 
   public detach () {
     this.sendCommand('qd', ['quit:'])
+    this.server.worker.terminate()
+    unlinkSync(getOutPath(this.pid))
   }
 
   public baseAddress (): number

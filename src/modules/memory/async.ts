@@ -11,6 +11,8 @@ export class Memory extends MemorySpec {
     super()
   }
 
+  public pid = this.dbg.pid
+
   public async read (type: TNumericDataTypes, address: number): Promise<number>
   public async read (type: TStringDataTypes, address: number): Promise<string>
   public async read (type: DataTypes, address: number): Promise<string | number>
