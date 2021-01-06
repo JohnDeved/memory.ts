@@ -1,4 +1,4 @@
-import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes, isHexType, isNumericType, TDbg } from '../dbg/types'
+import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes, isHexType, TDbg } from '../dbg/types'
 import { sendCommand } from '../dbg'
 import { MemorySpec } from './spec'
 
@@ -15,28 +15,16 @@ export class Memory extends MemorySpec {
   public async read (type: TStringDataTypes, address: number): Promise<string>
   public async read (type: DataTypes, address: number): Promise<string | number>
   public async read (type: DataTypes, address: number) {
-    const hexAddress = address.toString(16)
-
+    const hexAddress = this._readPreProcess(address)
     const text = await this.sendCommand(`d${type} ${hexAddress} L 1`, [hexAddress])
-    const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
-    const [, res] = regex.exec(text) ?? []
-
-    if (isNumericType(type)) {
-      if (isHexType(type)) {
-        return parseInt(res.replace(/`/g, ''), 16)
-      }
-
-      return Number(res)
-    }
-
-    return res
+    return this._readPostProcess(type, hexAddress, text)
   }
 
   public async write (type: TNumericDataTypes, address: number, value: number): Promise<void>
   public async write (type: TStringDataTypes, address: number, value: string): Promise<void>
   public async write (type: DataTypes, address: number, value: string | number): Promise<void>
   public async write (type: DataTypes, address: number, value: string | number) {
-    const hexAddress = address.toString(16)
+    const hexAddress = this._writePreProcess(address)
 
     if (isHexType(type)) {
       return void await this.sendCommand(`e${type} ${hexAddress} ${value.toString(16)}`)
@@ -47,24 +35,16 @@ export class Memory extends MemorySpec {
 
   public async modules (): Promise<IModules[]> {
     const text = await this.sendCommand('lmn', ['Unloaded', 'modules:'], true)
-    return [...text.matchAll(/^(\w{6,16}) (\w{8,16})\s+(\w+) (.+)$/gm)].map(moduleMatch => {
-      const [, baseAddr, endAddr, module, name] = moduleMatch
-      return {
-        baseAddr: parseInt(baseAddr, 16),
-        endAddr: parseInt(endAddr, 16),
-        module: module.trim(),
-        name: name.trim()
-      }
-    })
+    return this._modulesPostProcess(text)
   }
 
   public async module (modulename = this.processName) {
     const modules = await this.modules()
-    return modules.find(module => module.name === modulename)
+    return this._modulePostProcess(modulename, modules)
   }
 
   public async address (startModule: string, ...offsets: number[]): Promise<number>
-  public async address (startAddress: number, ...offsets: number[]): Promise<number>
+  public async address (startAddress: number | string, ...offsets: number[]): Promise<number>
   public async address (startAddress: number | string, ...offsets: number[]) {
     let address = 0
 
@@ -93,7 +73,7 @@ export class Memory extends MemorySpec {
   public async memory (startModule: string, ...offsets: number[]): Promise<[memory: TMemory, address: number]>
   public async memory (startAddress: number, ...offsets: number[]): Promise<[memory: TMemory, address: number]>
   public async memory (addr: number | string, ...offsets: number[]) {
-    const address = await this.address(addr as string, ...offsets)
+    const address = await this.address(addr, ...offsets)
 
     const proxy = new Proxy<TMemory>({} as any, {
       get: (_, type: TDataTypes) => async (value?: string | number) => {

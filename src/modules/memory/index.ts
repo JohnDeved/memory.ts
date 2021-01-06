@@ -1,7 +1,4 @@
-import { EventEmitter } from 'events'
-import { Worker } from 'worker_threads'
 import { initDbg } from '../dbg'
-import { server } from '../dbg/config'
 import { Memory } from './async'
 
 export async function attach (processName: string) {
@@ -19,13 +16,13 @@ export async function attach (processName: string) {
 //   })
 // }
 
-function initServer (processName: string) {
-  const worker = new Worker(server, { workerData: processName }).on('error', console.error)
+// function initServer (processName: string) {
+//   const worker = new Worker(server, { workerData: processName }).on('error', console.error)
 
-  const events = new EventEmitter()
-  worker.on('message', ({ event, data }: { event: string, data: any }) => {
-    events.emit(event, data)
-  })
+//   const events = new EventEmitter()
+//   worker.on('message', ({ event, data }: { event: string, data: any }) => {
+//     events.emit(event, data)
+//   })
 
-  return { worker, events }
-}
+//   return { worker, events }
+// }
