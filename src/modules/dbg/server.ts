@@ -1,6 +1,5 @@
-import { writeFileSync } from 'fs-extra'
 import { workerData as processName, parentPort } from 'worker_threads'
-import { getOutPath, initDbg, sendCommand } from '.'
+import { initDbg, sendCommand } from '.'
 import { TDbg } from './types'
 
 interface IMessageDate {
@@ -9,6 +8,7 @@ interface IMessageDate {
   collect?: true
   sync?: true
   dbg: TDbg
+  sharedMemory: SharedArrayBuffer
 }
 
 init(processName).then(dbg => {
@@ -16,19 +16,15 @@ init(processName).then(dbg => {
 })
 
 async function init (processName: string) {
-  const { b64, dbg } = await initDbg(processName, true)
+  const { b64, dbg } = await initDbg(processName)
 
   parentPort?.postMessage({ event: 'init', data: { b64, pid: dbg.pid } })
 
   return dbg
 }
 
-async function handleMessage ({ dbg, command, expect, collect, sync }: IMessageDate) {
+async function handleMessage ({ dbg, command, expect, collect, sync, sharedMemory }: IMessageDate) {
   const respoonse = await sendCommand(dbg, command, expect, collect)
 
-  if (sync) {
-    return writeFileSync(getOutPath(dbg.pid), respoonse)
-  }
-
-  parentPort?.postMessage({ event: command, data: respoonse })
+  Buffer.from(respoonse).copy(Buffer.from(sharedMemory))
 }

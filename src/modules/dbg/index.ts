@@ -1,6 +1,5 @@
 import { execFile, spawn } from 'child_process'
-import { ensureFile } from 'fs-extra'
-import { cdb32, cdb64, out, tlist } from './config'
+import { cdb32, cdb64, tlist } from './config'
 import { TDbg } from './types'
 
 export async function is64Bit (processName: string) {
@@ -13,18 +12,10 @@ export async function is64Bit (processName: string) {
   })
 }
 
-export function getOutPath (pid: number) {
-  return `${out}_${pid}`
-}
-
-export async function initDbg (processName: string, sync = false) {
+export async function initDbg (processName: string) {
   const b64 = await is64Bit(processName)
   const dbg = spawn(b64 ? cdb64 : cdb32, ['-pvr', '-pn', processName])
   dbg.stderr.pipe(process.stdout)
-
-  if (sync) {
-    await ensureFile(getOutPath(dbg.pid))
-  }
 
   return await new Promise<{ dbg: typeof dbg, b64: typeof b64 }>((resolve) => {
     dbg.stdout.on('data', (data: Buffer) => {

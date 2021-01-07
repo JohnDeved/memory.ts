@@ -11,7 +11,7 @@ export async function attach (processName: string) {
 }
 
 export function attachSync (processName: string) {
-  const worker = new Worker(server, { workerData: processName }).on('error', console.error)
+  const worker = new Worker(server, { workerData: processName })
 
   const events = new EventEmitter()
   worker.on('message', ({ event, data }: { event: string, data: any }) => {

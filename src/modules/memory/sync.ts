@@ -1,9 +1,7 @@
 import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TDataTypes, TMemorySync } from '../dbg/types'
-import { getOutPath } from '../dbg'
 import { MemorySpec } from './spec'
 import { Worker } from 'worker_threads'
 import { EventEmitter } from 'events'
-import { readFileSync, unlinkSync, writeFileSync } from 'fs-extra'
 
 export class MemorySync extends MemorySpec {
   constructor (
@@ -92,7 +90,6 @@ export class MemorySync extends MemorySpec {
   public detach () {
     this.sendCommand(...this._detachCommand())
     this.server.worker.terminate()
-    unlinkSync(getOutPath(this.pid))
   }
 
   public baseAddress (): number
@@ -103,12 +100,16 @@ export class MemorySync extends MemorySpec {
   }
 
   public sendCommand (command: string, expect?: string[], collect?: boolean) {
-    const io = getOutPath(this.pid)
-    this.server.worker.postMessage({ command, expect, collect, sync: true })
+    const size = 50000
+    const sharedMemory = new SharedArrayBuffer(size)
+    const memory = Buffer.from(sharedMemory)
+    const comp = Buffer.alloc(size)
 
-    let read = ''
-    while (!read) read = readFileSync(io, { encoding: 'ascii' })
-    writeFileSync(io, '')
+    this.server.worker.postMessage({ command, expect, collect, sync: true, sharedMemory })
+
+    while (comp.compare(memory) === 0) {}
+
+    const read = memory.toString()
     return read
   }
 }
