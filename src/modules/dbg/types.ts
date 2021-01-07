@@ -60,6 +60,12 @@ export type TMemory = {
   [key in TStringTypes]: () => Promise<string>
 }
 
+export type TMemorySync = {
+  [key in TNumericTypes]: number
+} & {
+  [key in TStringTypes]: string
+}
+
 export function isNumericType (type: DataTypes) {
   return ![DataTypes.unicode, DataTypes.ascii].includes(type)
 }

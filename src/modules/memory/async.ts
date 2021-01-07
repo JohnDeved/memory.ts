@@ -1,4 +1,4 @@
-import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes, isHexType, TDbg } from '../dbg/types'
+import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes, TDbg } from '../dbg/types'
 import { sendCommand } from '../dbg'
 import { MemorySpec } from './spec'
 

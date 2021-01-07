@@ -1,4 +1,4 @@
-import { DataTypes, IModules, isHexType, isNumericType, TMemory } from '../dbg/types'
+import { DataTypes, IModules, isHexType, isNumericType, TMemory, TMemorySync } from '../dbg/types'
 
 export abstract class MemorySpec {
   public version = 0.1
@@ -83,7 +83,7 @@ export abstract class MemorySpec {
   /**
    * memory
    */
-  public abstract memory (addr: number | string, ...offsets: number[]): Promise<[memory: TMemory, address: number]> | [memory: TMemory, address: number]
+  public abstract memory (addr: number | string, ...offsets: number[]): Promise<[memory: TMemory, address: number]> | [memory: TMemorySync, address: number]
 
   /**
    * detach

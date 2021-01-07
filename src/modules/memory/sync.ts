@@ -1,4 +1,4 @@
-import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes, isHexType } from '../dbg/types'
+import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TDataTypes, TMemorySync } from '../dbg/types'
 import { getOutPath } from '../dbg'
 import { MemorySpec } from './spec'
 import { Worker } from 'worker_threads'
@@ -68,21 +68,21 @@ export class MemorySync extends MemorySpec {
     return address
   }
 
-  public memory (address: number): [memory: TMemory, address: number]
-  public memory (startModule: string, ...offsets: number[]): [memory: TMemory, address: number]
-  public memory (startAddress: number, ...offsets: number[]): [memory: TMemory, address: number]
+  public memory (address: number): [memory: TMemorySync, address: number]
+  public memory (startModule: string, ...offsets: number[]): [memory: TMemorySync, address: number]
+  public memory (startAddress: number, ...offsets: number[]): [memory: TMemorySync, address: number]
   public memory (addr: number | string, ...offsets: number[]) {
     const address = this.address(addr, ...offsets)
 
-    const proxy = new Proxy<TMemory>({} as any, {
-      get: (_, type: TDataTypes) => async (value?: string | number) => {
+    const proxy = new Proxy<TMemorySync>({} as any, {
+      get: (_, type: TDataTypes) => {
         if (!DataTypes[type]) return
-
-        if (value) {
-          return this.write(DataTypes[type], address, value)
-        }
-
         return this.read(DataTypes[type], address)
+      },
+      set: (_, type: TDataTypes, value: string | number) => {
+        if (!DataTypes[type]) return false
+        this.write(DataTypes[type], address, value)
+        return true
       }
     })
 

@@ -34,12 +34,12 @@ async function main () {
 
   time = Date.now() + 1000
   index = 0
-  for (; time >= Date.now(); index++) moneySync.double(index)
+  for (; time >= Date.now(); index++) moneySync.double = index
   console.log('sync write proxy', index, '/ sec')
 
   time = Date.now() + 1000
   index = 0
-  for (; time >= Date.now(); index++) moneySync.double()
+  for (; time >= Date.now(); index++) void moneySync.double
   console.log('sync read proxy', index, '/ sec')
 
   time = Date.now() + 1000
@@ -52,7 +52,7 @@ async function main () {
   for (; time >= Date.now(); index++) processSync.read(DataTypes.double, moneyAddressSync)
   console.log('sync read', index, '/ sec')
 
-  console.log(await moneySync.double(), moneyAddressSync)
+  console.log(moneySync.double, moneyAddressSync)
 
   processSync.detach()
 }
