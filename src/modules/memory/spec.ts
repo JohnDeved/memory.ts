@@ -52,7 +52,7 @@ export abstract class MemorySpec {
   public abstract modules (): Promise<IModules[]> | IModules[]
 
   protected _modulesCommand (): Parameters<MemorySpec['sendCommand']> {
-    return ['lmn', ['Unloaded', 'modules:'], true]
+    return ['lmn', undefined, true]
   }
 
   protected _modulesPostProcess (text: string) {

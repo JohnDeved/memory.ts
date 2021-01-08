@@ -1,30 +1,43 @@
-import { workerData as processName, parentPort } from 'worker_threads'
+import { parentPort } from 'worker_threads'
 import { initDbg, sendCommand } from '.'
-import { TDbg } from './types'
+import { inputBufferSize } from './config'
+import { IInputData, IWorkData, TDbg } from './types'
 
-interface IMessageDate {
-  command: string
-  expect?: string[]
-  collect?: true
-  sync?: true
-  dbg: TDbg
-  sharedMemory: SharedArrayBuffer
+class DebugServer {
+  constructor (
+    private readonly dbg: TDbg,
+    private readonly inputBuffer: Buffer,
+    private readonly outputBuffer: Buffer
+  ) {
+    this.requestListener()
+  }
+
+  private readonly compareBuffer = Buffer.alloc(inputBufferSize)
+
+  public async requestListener () {
+    while (true) {
+      while (this.compareBuffer.compare(this.inputBuffer) === 0) {}
+      const input = this.inputBuffer.toString().replace(/\0/g, '')
+      this.inputBuffer.fill(0)
+      await this.onRequest(JSON.parse(input))
+    }
+  }
+
+  private async onRequest ({ command, expect, collect }: IInputData) {
+    const respoonse = await sendCommand(this.dbg, command, expect, collect)
+    this.sendResponse(respoonse)
+  }
+
+  private sendResponse (respoonse: string) {
+    Buffer.from(respoonse).copy(this.outputBuffer)
+  }
 }
 
-init(processName).then(dbg => {
-  parentPort?.on('message', data => handleMessage({ ...data, dbg }))
-})
-
-async function init (processName: string) {
+parentPort?.once('message', async ({ processName, inputBuffer, outputBuffer }: IWorkData) => {
   const { b64, dbg } = await initDbg(processName)
 
-  parentPort?.postMessage({ event: 'init', data: { b64, pid: dbg.pid } })
-
-  return dbg
-}
-
-async function handleMessage ({ dbg, command, expect, collect, sync, sharedMemory }: IMessageDate) {
-  const respoonse = await sendCommand(dbg, command, expect, collect)
-
-  Buffer.from(respoonse).copy(Buffer.from(sharedMemory))
-}
+  const iBuffer = Buffer.from(inputBuffer)
+  const oBuffer = Buffer.from(outputBuffer)
+  parentPort?.postMessage({ b64, pid: dbg.pid })
+  new DebugServer(dbg, iBuffer, oBuffer)
+})

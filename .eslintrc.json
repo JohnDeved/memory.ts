@@ -23,6 +23,7 @@
         "@typescript-eslint/no-misused-promises": "off",
         "@typescript-eslint/method-signature-style": "off",
         "prefer-template": "error",
-        "no-void": "off"
+        "no-void": "off",
+        "no-new": "off"
     }
 }

@@ -73,3 +73,15 @@ export function isNumericType (type: DataTypes) {
 export function isHexType (type: DataTypes) {
   return ![DataTypes.double, DataTypes.float].includes(type)
 }
+
+export interface IWorkData {
+  processName: string
+  inputBuffer: SharedArrayBuffer
+  outputBuffer: SharedArrayBuffer
+}
+
+export interface IInputData {
+  command: string
+  expect?: string[]
+  collect?: boolean
+}

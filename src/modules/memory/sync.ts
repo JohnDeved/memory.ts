@@ -1,17 +1,21 @@
-import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TDataTypes, TMemorySync } from '../dbg/types'
+import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TDataTypes, TMemorySync, IInputData } from '../dbg/types'
 import { MemorySpec } from './spec'
 import { Worker } from 'worker_threads'
-import { EventEmitter } from 'events'
+import { outputBufferSize } from '../dbg/config'
 
 export class MemorySync extends MemorySpec {
   constructor (
-    private readonly server: { worker: Worker, events: EventEmitter },
+    private readonly worker: Worker,
+    private readonly inputBuffer: Buffer,
+    private readonly outputBuffer: Buffer,
     public pid: number,
     public processName: string,
     public is64bit: boolean
   ) {
     super()
   }
+
+  private readonly compareBuffer = Buffer.alloc(outputBufferSize)
 
   public read (type: TNumericDataTypes, address: number): number
   public read (type: TStringDataTypes, address: number): string
@@ -89,7 +93,7 @@ export class MemorySync extends MemorySpec {
 
   public detach () {
     this.sendCommand(...this._detachCommand())
-    this.server.worker.terminate()
+    this.worker.terminate()
   }
 
   public baseAddress (): number
@@ -100,16 +104,15 @@ export class MemorySync extends MemorySpec {
   }
 
   public sendCommand (command: string, expect?: string[], collect?: boolean) {
-    const size = 50000
-    const sharedMemory = new SharedArrayBuffer(size)
-    const memory = Buffer.from(sharedMemory)
-    const comp = Buffer.alloc(size)
+    this.sendInput({ command, expect, collect })
+    while (this.compareBuffer.compare(this.outputBuffer) === 0) {}
 
-    this.server.worker.postMessage({ command, expect, collect, sync: true, sharedMemory })
-
-    while (comp.compare(memory) === 0) {}
-
-    const read = memory.toString()
+    const read = this.outputBuffer.toString()
+    this.outputBuffer.fill(0)
     return read
+  }
+
+  private sendInput (input: IInputData) {
+    Buffer.from(JSON.stringify(input)).copy(this.inputBuffer)
   }
 }

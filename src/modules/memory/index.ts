@@ -1,7 +1,7 @@
-import { EventEmitter } from 'events'
 import { Worker } from 'worker_threads'
 import { initDbg } from '../dbg'
-import { server } from '../dbg/config'
+import { inputBuffer, outputBuffer, server } from '../dbg/config'
+import { IWorkData } from '../dbg/types'
 import { Memory } from './async'
 import { MemorySync } from './sync'
 
@@ -11,16 +11,15 @@ export async function attach (processName: string) {
 }
 
 export function attachSync (processName: string) {
-  const worker = new Worker(server, { workerData: processName })
-
-  const events = new EventEmitter()
-  worker.on('message', ({ event, data }: { event: string, data: any }) => {
-    events.emit(event, data)
-  })
-
+  const workerData: IWorkData = { processName, inputBuffer, outputBuffer }
+  const worker = new Worker(server)
   return new Promise<MemorySync>(resolve => {
-    events.once('init', ({ b64, pid }: { b64: boolean, pid: number }) => {
-      resolve(new MemorySync({ worker, events }, pid, processName, b64))
+    worker.postMessage(workerData)
+    worker.once('message', ({ b64, pid }: { b64: boolean, pid: number }) => {
+      const iBuffer = Buffer.from(inputBuffer)
+      const oBuffer = Buffer.from(outputBuffer)
+      const memory = new MemorySync(worker, iBuffer, oBuffer, pid, processName, b64)
+      resolve(memory)
     })
   })
 }
