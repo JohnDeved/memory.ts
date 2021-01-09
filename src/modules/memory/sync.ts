@@ -30,19 +30,25 @@ export class MemorySync extends MemorySpec {
   public write (type: TStringDataTypes, address: number, value: string): void
   public write (type: DataTypes, address: number, value: string | number): void
   public write (type: DataTypes, address: number, value: string | number) {
-    const hexAddress = this._writePreProcess(address)
-    return void this.sendCommand(...this._writeCommand(type, hexAddress, value))
+    return void this.sendCommand(...this._writeCommand(type, address, value))
   }
 
   public readBuffer (address: number, length: number) {
-    const hexAddress = this._readBufferPreProcess(address)
-    const text = this.sendCommand(...this._readBufferCommand(hexAddress, length))
+    const text = this.sendCommand(...this._readBufferCommand(address, length))
     return this._readBufferPostProcess(text, length)
   }
 
   public writeBuffer (address: number, value: Buffer) {
-    const hexAddress = this._writeBufferPreProcess(address)
-    return void this.sendCommand(...this._writeBufferCommand(hexAddress, value))
+    return void this.sendCommand(...this._writeBufferCommand(address, value))
+  }
+
+  public alloc (size?: number) {
+    const text = this.sendCommand(...this._allocCommand(size))
+    return this._allocPostProcess(text)
+  }
+
+  public free (address: number, size?: number) {
+    return void this.sendCommand(...this._freeCommand(address, size))
   }
 
   public modules (): IModules[] {

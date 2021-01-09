@@ -36,14 +36,12 @@ export abstract class MemorySpec {
    */
   public abstract write (type: DataTypes, address: number, value: string | number): Promise<void> | void
 
-  protected _writePreProcess = this._readPreProcess
-
-  protected _writeCommand (type: DataTypes, hexAddress: string, value: string | number): Parameters<MemorySpec['sendCommand']> {
+  protected _writeCommand (type: DataTypes, address: number, value: string | number): Parameters<MemorySpec['sendCommand']> {
     if (isHexType(type)) {
-      return [`e${type} ${hexAddress} ${value.toString(16)}`]
+      return [`e${type} ${address.toString(16)} ${value.toString(16)}`]
     }
 
-    return [`e${type} ${hexAddress} ${value}`]
+    return [`e${type} ${address.toString(16)} ${value}`]
   }
 
   /**
@@ -51,10 +49,8 @@ export abstract class MemorySpec {
    */
   public abstract readBuffer (address: number, length: number): Promise<Buffer> | Buffer
 
-  protected _readBufferPreProcess = this._readPreProcess
-
-  protected _readBufferCommand (hexAddress: string, length: number): Parameters<MemorySpec['sendCommand']> {
-    return [`db ${hexAddress} L ${length}`, undefined, true]
+  protected _readBufferCommand (address: number, length: number): Parameters<MemorySpec['sendCommand']> {
+    return [`db ${address.toString(16)} L ${length}`, undefined, true]
   }
 
   protected _readBufferPostProcess (text: string, length: number) {
@@ -74,11 +70,33 @@ export abstract class MemorySpec {
    */
   public abstract writeBuffer (address: number, value: Buffer): Promise<void> | void
 
-  protected _writeBufferPreProcess = this._readPreProcess
-
-  protected _writeBufferCommand (hexAddress: string, value: Buffer): Parameters<MemorySpec['sendCommand']> {
+  protected _writeBufferCommand (address: number, value: Buffer): Parameters<MemorySpec['sendCommand']> {
     const input = [...value].map(n => n.toString(16)).join(' ')
-    return [`eb ${hexAddress} ${input}`]
+    return [`eb ${address.toString(16)} ${input}`]
+  }
+
+  /**
+   * alloc
+   */
+  public abstract alloc (size?: number): Promise<number> | number
+
+  protected _allocCommand (size = 1000): Parameters<MemorySpec['sendCommand']> {
+    return [`.dvalloc ${size}`]
+  }
+
+  protected _allocPostProcess (text: string) {
+    const [, addr] = text.match(/starting at (\w+)/) ?? []
+
+    return parseInt(addr, 16)
+  }
+
+  /**
+   * free
+   */
+  public abstract free (address: number, size?: number): Promise<void> | void
+
+  protected _freeCommand (address: number, size = 1000): Parameters<MemorySpec['sendCommand']> {
+    return [`.dvfree -d ${address.toString(16)} ${size}`]
   }
 
   /**

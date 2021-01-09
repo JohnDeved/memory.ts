@@ -26,19 +26,25 @@ export class Memory extends MemorySpec {
   public async write (type: TStringDataTypes, address: number, value: string): Promise<void>
   public async write (type: DataTypes, address: number, value: string | number): Promise<void>
   public async write (type: DataTypes, address: number, value: string | number) {
-    const hexAddress = this._writePreProcess(address)
-    return void await this.sendCommand(...this._writeCommand(type, hexAddress, value))
+    return void await this.sendCommand(...this._writeCommand(type, address, value))
   }
 
   public async readBuffer (address: number, length: number) {
-    const hexAddress = this._readBufferPreProcess(address)
-    const text = await this.sendCommand(...this._readBufferCommand(hexAddress, length))
+    const text = await this.sendCommand(...this._readBufferCommand(address, length))
     return this._readBufferPostProcess(text, length)
   }
 
   public async writeBuffer (address: number, value: Buffer) {
-    const hexAddress = this._writeBufferPreProcess(address)
-    return void this.sendCommand(...this._writeBufferCommand(hexAddress, value))
+    return void await this.sendCommand(...this._writeBufferCommand(address, value))
+  }
+
+  public async alloc (size?: number) {
+    const text = await this.sendCommand(...this._allocCommand(size))
+    return this._allocPostProcess(text)
+  }
+
+  public async free (address: number, size?: number) {
+    return void await this.sendCommand(...this._freeCommand(address, size))
   }
 
   public async modules (): Promise<IModules[]> {

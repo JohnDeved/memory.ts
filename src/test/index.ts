@@ -1,8 +1,15 @@
 import { attachSync } from '../modules/memory'
 
 attachSync('Tap Dungeon.exe').then(process => {
-  process.writeBuffer(0x00ce0000, Buffer.from('Hello World!'))
-  const buffer = process.readBuffer(0x00ce0000, 100)
-  console.log(buffer, buffer.byteLength)
+  const region = process.alloc()
+
+  const myBuffer = Buffer.from('Hello World!')
+  process.writeBuffer(region, myBuffer)
+
+  const buffer = process.readBuffer(region, myBuffer.byteLength)
+  console.log(region.toString(16), buffer.toString())
+
+  process.free(region)
+
   process.detach()
 })
