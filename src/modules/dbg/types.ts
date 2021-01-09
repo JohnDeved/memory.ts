@@ -76,7 +76,6 @@ export function isHexType (type: DataTypes) {
 
 export interface IWorkData {
   processName: string
-  inputBuffer: SharedArrayBuffer
   outputBuffer: SharedArrayBuffer
 }
 

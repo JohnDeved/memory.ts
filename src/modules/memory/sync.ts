@@ -6,7 +6,6 @@ import { outputBufferSize } from '../dbg/config'
 export class MemorySync extends MemorySpec {
   constructor (
     private readonly worker: Worker,
-    private readonly inputBuffer: Buffer,
     private readonly outputBuffer: Buffer,
     public pid: number,
     public processName: string,
