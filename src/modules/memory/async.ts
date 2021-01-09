@@ -30,6 +30,17 @@ export class Memory extends MemorySpec {
     return void await this.sendCommand(...this._writeCommand(type, hexAddress, value))
   }
 
+  public async readBuffer (address: number, length: number) {
+    const hexAddress = this._readBufferPreProcess(address)
+    const text = await this.sendCommand(...this._readBufferCommand(hexAddress, length))
+    return this._readBufferPostProcess(text, length)
+  }
+
+  public async writeBuffer (address: number, value: Buffer) {
+    const hexAddress = this._writeBufferPreProcess(address)
+    return void this.sendCommand(...this._writeBufferCommand(hexAddress, value))
+  }
+
   public async modules (): Promise<IModules[]> {
     const text = await this.sendCommand(...this._modulesCommand())
     return this._modulesPostProcess(text)

@@ -34,6 +34,17 @@ export class MemorySync extends MemorySpec {
     return void this.sendCommand(...this._writeCommand(type, hexAddress, value))
   }
 
+  public readBuffer (address: number, length: number) {
+    const hexAddress = this._readBufferPreProcess(address)
+    const text = this.sendCommand(...this._readBufferCommand(hexAddress, length))
+    return this._readBufferPostProcess(text, length)
+  }
+
+  public writeBuffer (address: number, value: Buffer) {
+    const hexAddress = this._writeBufferPreProcess(address)
+    return void this.sendCommand(...this._writeBufferCommand(hexAddress, value))
+  }
+
   public modules (): IModules[] {
     const text = this.sendCommand(...this._modulesCommand())
     return this._modulesPostProcess(text)

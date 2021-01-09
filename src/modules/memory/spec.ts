@@ -6,7 +6,7 @@ export abstract class MemorySpec {
   /**
    * read
    */
-  public abstract read (type: DataTypes, address: number): Promise<string> | string
+  public abstract read (type: DataTypes, address: number): Promise<string | number> | string | number
 
   protected _readPreProcess (address: number) {
     return address.toString(16)
@@ -25,7 +25,7 @@ export abstract class MemorySpec {
         return parseInt(res.replace(/`/g, ''), 16)
       }
 
-      return Number(res)
+      return parseFloat(res)
     }
 
     return res
@@ -44,6 +44,41 @@ export abstract class MemorySpec {
     }
 
     return [`e${type} ${hexAddress} ${value}`]
+  }
+
+  /**
+   * readBuffer
+   */
+  public abstract readBuffer (address: number, length: number): Promise<Buffer> | Buffer
+
+  protected _readBufferPreProcess = this._readPreProcess
+
+  protected _readBufferCommand (hexAddress: string, length: number): Parameters<MemorySpec['sendCommand']> {
+    return [`db ${hexAddress} L ${length}`, undefined, true]
+  }
+
+  protected _readBufferPostProcess (text: string, length: number) {
+    const bytes = text
+      .replace(/^\w{8,16} {2}(.+) {2}.{0,20}(?=$)/gm, '$1') // extract bytes from result
+      .replace(/([-\n]|0:000>)/g, ' ') // remove non bytes from string
+      .trim().split(' ') // bytes to string array
+      .map(n => parseInt(n, 16)) // to number array
+      .filter(n => !isNaN(n)) // filter out bad bytes
+      .slice(0, length) // remove excesive bytes
+
+    return Buffer.from(bytes)
+  }
+
+  /**
+   * writeBuffer
+   */
+  public abstract writeBuffer (address: number, value: Buffer): Promise<void> | void
+
+  protected _writeBufferPreProcess = this._readPreProcess
+
+  protected _writeBufferCommand (hexAddress: string, value: Buffer): Parameters<MemorySpec['sendCommand']> {
+    const input = [...value].map(n => n.toString(16)).join(' ')
+    return [`eb ${hexAddress} ${input}`]
   }
 
   /**
