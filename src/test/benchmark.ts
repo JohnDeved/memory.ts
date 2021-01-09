@@ -30,7 +30,7 @@ async function main () {
   process.detach()
 
   const processSync = await attachSync('Tap Dungeon.exe')
-  const [moneySync, moneyAddressSync] = await processSync.memory(processSync.processName, 0x2F0DD8, 0x24, 0x8)
+  const [moneySync, moneyAddressSync] = processSync.memory(processSync.processName, 0x2F0DD8, 0x24, 0x8)
 
   time = Date.now() + 1000
   index = 0
@@ -49,10 +49,10 @@ async function main () {
 
   time = Date.now() + 1000
   index = 0
-  for (; time >= Date.now(); index++) processSync.read(DataTypes.double, 0x28b5c6c0)
+  for (; time >= Date.now(); index++) void processSync.read(DataTypes.double, moneyAddressSync)
   console.log('sync read', index, '/ sec')
 
-  console.log(moneySync.double, 0x28b5c6c0)
+  console.log(moneySync.double, moneyAddressSync)
 
   processSync.detach()
 }
