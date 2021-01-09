@@ -130,6 +130,6 @@ export class MemorySync extends MemorySpec {
   }
 
   private sendInput (input: IInputData) {
-    Buffer.from(JSON.stringify(input)).copy(this.inputBuffer)
+    this.worker.postMessage(input)
   }
 }
