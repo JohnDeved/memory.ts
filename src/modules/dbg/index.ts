@@ -38,7 +38,7 @@ function fetchResults (dbg: TDbg, expect: string[], collect: boolean) {
   return new Promise<string>(resolve => {
     const listen = (exp: string[], collection = '') => {
       dbg.stdout.once('data', (data: Buffer) => {
-        collection += data.toString()
+        collection += data.toString().replace(/([0-9a-f]{8})`([0-9a-f]{8})/gi, '$1$2')
 
         if (exp.map(e => !collection.includes(e)).filter(Boolean).length === 0) {
           return resolve(collection)
