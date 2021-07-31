@@ -10,9 +10,8 @@ class DebugServer {
     parentPort?.on('message', this.onRequest.bind(this))
   }
 
-  private async onRequest ({ command, expect, collect }: IInputData) {
-    const respoonse = await sendCommand(this.dbg, command, expect, collect)
-    this.sendResponse(respoonse)
+  private onRequest ({ command, expect, collect }: IInputData) {
+    sendCommand(this.dbg, command, expect, collect).then(res => this.sendResponse(res))
   }
 
   private sendResponse (respoonse: string) {
