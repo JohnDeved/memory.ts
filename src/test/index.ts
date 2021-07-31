@@ -9,7 +9,7 @@ attachSync('Tap Dungeon.exe').then(process => {
   const buffer = process.readBuffer(region, myBuffer.byteLength)
   console.log(region.toString(16), buffer.toString())
 
-  process.free(region)
+  // process.free(region)
 
   process.detach()
 })
