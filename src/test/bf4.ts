@@ -1,11 +1,18 @@
 import { attachSync } from '..'
 import { DataTypes } from '../modules/dbg/types'
 
-attachSync('bf4.exe').then(process => {
-  console.log(process.is64bit, process.pid, process.processName)
+attachSync('bf4.exe').then(bf4 => {
+  if (!bf4.is64bit) {
+    console.log('sorry, only 64 bit version of bf4 supported')
+    return bf4.detach()
+  }
 
-  function isValid (address?: number) {
-    return typeof address === 'number' && address > 0x10000 && address < 0x000F000000000000
+  console.log('attached to', bf4.processName, 'pid', bf4.pid)
+  console.log('======== created by undefined. ========')
+  console.log('=========== @undefined_prop ===========')
+
+  function isValidAddress (address?: number) {
+    return typeof address === 'number' && !isNaN(address) && address > 0x10000 && address < 0x000F000000000000
   }
 
   enum SpottingEnum {
@@ -16,31 +23,31 @@ attachSync('bf4.exe').then(process => {
     unspottable,
   }
 
-  class SoliderEntity {
+  class SoldierEntity {
     constructor (public address: number) {}
 
     get isSprinting () {
-      const sprintingAddress = process.address(this.address, 0x5B0)
-      return Boolean(process.read(DataTypes.byte, sprintingAddress))
+      const sprintingAddress = bf4.address(this.address, 0x5B0)
+      return Boolean(bf4.read(DataTypes.byte, sprintingAddress))
     }
 
     get isOccluded () {
-      const occludedAddress = process.address(this.address, 0x05B1)
-      return Boolean(process.read(DataTypes.byte, occludedAddress))
+      const occludedAddress = bf4.address(this.address, 0x05B1)
+      return Boolean(bf4.read(DataTypes.byte, occludedAddress))
     }
 
     get spotType () {
-      const spotTypeAddress = process.address(this.address, 0x0BF0, 0x0050)
-      if (!isValid(spotTypeAddress)) return
-      const typeNum = process.read(DataTypes.byte, spotTypeAddress)
+      const spotTypeAddress = bf4.address(this.address, 0x0BF0, 0x0050)
+      if (!isValidAddress(spotTypeAddress)) return
+      const typeNum = bf4.read(DataTypes.byte, spotTypeAddress)
       return SpottingEnum[typeNum] as keyof typeof SpottingEnum | undefined
     }
 
     set spotType (value: keyof typeof SpottingEnum | undefined) {
-      const spotTypeAddress = process.address(this.address, 0x0BF0, 0x0050)
-      if (!isValid(spotTypeAddress)) return
+      const spotTypeAddress = bf4.address(this.address, 0x0BF0, 0x0050)
+      if (!isValidAddress(spotTypeAddress)) return
       if (!value) return
-      process.write(DataTypes.byte, spotTypeAddress, SpottingEnum[value])
+      bf4.write(DataTypes.byte, spotTypeAddress, SpottingEnum[value])
     }
   }
 
@@ -48,24 +55,24 @@ attachSync('bf4.exe').then(process => {
     constructor (public address: number) {}
 
     get name () {
-      const nameAddress = process.address(this.address, 0x40)
-      return process.read(DataTypes.ascii, nameAddress)
+      const nameAddress = bf4.address(this.address, 0x40)
+      return bf4.read(DataTypes.ascii, nameAddress)
     }
 
     get isSpectator () {
-      const isSpectatorAddress = process.address(this.address, 0x13C9)
-      return Boolean(process.read(DataTypes.byte, isSpectatorAddress))
+      const isSpectatorAddress = bf4.address(this.address, 0x13C9)
+      return Boolean(bf4.read(DataTypes.byte, isSpectatorAddress))
     }
 
     get teamId () {
-      const teamIdAddress = process.address(this.address, 0x13CC)
-      return process.read(DataTypes.byte4, teamIdAddress)
+      const teamIdAddress = bf4.address(this.address, 0x13CC)
+      return bf4.read(DataTypes.byte4, teamIdAddress)
     }
 
-    get solider () {
-      const entityAddress = process.address(this.address, 0x14D0)
-      if (!isValid(entityAddress)) return
-      return new SoliderEntity(entityAddress)
+    get soldier () {
+      const entityAddress = bf4.address(this.address, 0x14D0)
+      if (!isValidAddress(entityAddress)) return
+      return new SoldierEntity(entityAddress)
     }
   }
 
@@ -73,24 +80,24 @@ attachSync('bf4.exe').then(process => {
     readonly context = 0x142670d80
 
     get playerManager () {
-      return process.address(this.context, 0x60)
+      return bf4.address(this.context, 0x60)
     }
 
     get playerLocal () {
-      const playerAddress = process.address(this.playerManager, 0x540)
+      const playerAddress = bf4.address(this.playerManager, 0x540)
       return new Player(playerAddress)
     }
 
     get players () {
-      const playersAddress = process.address(this.playerManager, 0x548)
+      const playersAddress = bf4.address(this.playerManager, 0x548)
 
       const players: Player[] = []
 
       for (let i = 0; i < 64; i++) {
-        const playerAddress = process.address(playersAddress, i * /* int64 size */ 0x8)
-        const checkPointer = process.address(playerAddress, 0x0)
+        const playerAddress = bf4.address(playersAddress, i * /* int64 size */ 0x8)
+        const checkPointer = bf4.address(playerAddress, 0x0)
 
-        if (checkPointer) {
+        if (isValidAddress(checkPointer)) {
           players.push(new Player(playerAddress))
         }
       }
@@ -101,19 +108,24 @@ attachSync('bf4.exe').then(process => {
 
   const game = new Game()
 
-  setInterval(() => {
+  function doSpotting () {
     const playerTeamId = game.playerLocal.teamId
-    game.players.forEach((player, i) => {
-      const solider = player.solider
+    game.players.forEach(player => {
+      const solider = player.soldier
       if (!solider) return
 
       const spotType = solider.spotType
       if (!spotType || spotType === 'active' || playerTeamId === player.teamId) return
 
-      console.log('setting spot from', spotType, 'to active for', player.name)
+      console.log('changed', spotType.padEnd(11, ' '), '=> active [', player.name, ']')
       solider.spotType = 'active'
     })
-  }, 1000)
+    doSpotting()
+  }
 
-  // process.detach()
+  process.on('exit', function () {
+    bf4.detach()
+  })
+
+  doSpotting()
 })
