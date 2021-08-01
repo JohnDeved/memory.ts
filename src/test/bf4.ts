@@ -11,16 +11,18 @@ attachSync('bf4.exe').then(bf4 => {
   console.log('======== created by undefined. ========')
   console.log('=========== @undefined_prop ===========')
 
-  function isValidAddress (address?: number) {
-    return typeof address === 'number' && !isNaN(address) && address > 0x10000 && address < 0x000F000000000000
-  }
-
   enum SpottingEnum {
     none,
     active,
     passive,
     radar,
     unspottable,
+  }
+
+  const baseAddr = bf4.baseAddress()
+
+  function isValidAddress (address?: number) {
+    return typeof address === 'number' && !isNaN(address) && address > baseAddr && address < 0x000F000000000000
   }
 
   class SoldierEntity {
