@@ -1,4 +1,4 @@
-import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TMemory, TDataTypes, TDbg } from '../dbg/types'
+import { DataTypes, TNumericDataTypes, TStringDataTypes, IModule, TMemory, TDataTypes, TDbg } from '../dbg/types'
 import { sendCommand } from '../dbg'
 import { MemorySpec } from './spec'
 
@@ -47,7 +47,7 @@ export class Memory extends MemorySpec {
     return void await this.sendCommand(...this._freeCommand(address, size))
   }
 
-  public async modules (): Promise<IModules[]> {
+  public async modules (): Promise<IModule[]> {
     const text = await this.sendCommand(...this._modulesCommand())
     return this._modulesPostProcess(text)
   }

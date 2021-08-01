@@ -1,4 +1,4 @@
-import { DataTypes, TNumericDataTypes, TStringDataTypes, IModules, TDataTypes, TMemorySync, IInputData } from '../dbg/types'
+import { DataTypes, TNumericDataTypes, TStringDataTypes, IModule, TDataTypes, TMemorySync, IInputData } from '../dbg/types'
 import { MemorySpec } from './spec'
 import { Worker } from 'worker_threads'
 import { outputBufferSize } from '../dbg/config'
@@ -50,7 +50,7 @@ export class MemorySync extends MemorySpec {
     return void this.sendCommand(...this._freeCommand(address, size))
   }
 
-  public modules (): IModules[] {
+  public modules (): IModule[] {
     const text = this.sendCommand(...this._modulesCommand())
     return this._modulesPostProcess(text)
   }

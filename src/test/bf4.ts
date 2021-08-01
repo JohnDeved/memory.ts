@@ -19,10 +19,12 @@ attachSync('bf4.exe').then(bf4 => {
     unspottable,
   }
 
-  const baseAddr = bf4.baseAddress()
+  const module = bf4.module()
+  const baseAddress = module?.baseAddr ?? 0x10000
+  const endAddress = module?.endAddr ?? 0x000F000000000000
 
   function isValidAddress (address?: number) {
-    return typeof address === 'number' && !isNaN(address) && address > baseAddr && address < 0x000F000000000000
+    return typeof address === 'number' && !isNaN(address) && address > baseAddress && address < endAddress
   }
 
   class SoldierEntity {

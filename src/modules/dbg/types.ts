@@ -2,7 +2,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process'
 
 export type TDbg = ChildProcessWithoutNullStreams
 
-export interface IModules {
+export interface IModule {
   baseAddr: number
   endAddr: number
   module: string

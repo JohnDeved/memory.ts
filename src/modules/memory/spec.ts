@@ -1,4 +1,4 @@
-import { DataTypes, IModules, isHexType, isNumericType, isStringType, TMemory, TMemorySync } from '../dbg/types'
+import { DataTypes, IModule, isHexType, isNumericType, isStringType, TMemory, TMemorySync } from '../dbg/types'
 
 export abstract class MemorySpec {
   public version = 0.1
@@ -110,7 +110,7 @@ export abstract class MemorySpec {
   /**
    * modules
    */
-  public abstract modules (): Promise<IModules[]> | IModules[]
+  public abstract modules (): Promise<IModule[]> | IModule[]
 
   protected _modulesCommand (): Parameters<MemorySpec['sendCommand']> {
     return ['lmn', undefined, true]
@@ -131,8 +131,8 @@ export abstract class MemorySpec {
   /**
    * module
    */
-  public abstract module (modulename?: string): Promise<IModules | undefined> | IModules | undefined
-  protected _modulePostProcess (modulename: string, modules: IModules[]) {
+  public abstract module (modulename?: string): Promise<IModule | undefined> | IModule | undefined
+  protected _modulePostProcess (modulename: string, modules: IModule[]) {
     return modules.find(module => module.name === modulename)
   }
 
