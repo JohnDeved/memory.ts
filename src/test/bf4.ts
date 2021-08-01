@@ -109,17 +109,22 @@ attachSync('bf4.exe').then(bf4 => {
   const game = new Game()
 
   function doSpotting () {
-    const playerTeamId = game.playerLocal.teamId
-    game.players.forEach(player => {
-      const solider = player.soldier
-      if (!solider) return
+    const localTeamId = game.playerLocal.teamId
+    const players = game.players
 
-      const spotType = solider.spotType
-      if (!spotType || spotType === 'active' || playerTeamId === player.teamId) return
+    for (const player of players) {
+      if (localTeamId === player.teamId) continue
 
-      console.log('changed', spotType.padEnd(11, ' '), '=> active [', player.name, ']')
-      solider.spotType = 'active'
-    })
+      const soldier = player.soldier
+      if (!soldier) continue
+
+      const spotType = soldier.spotType
+      if (!spotType || spotType === 'active') continue
+
+      soldier.spotType = 'active'
+      console.log(spotType.padEnd(11, ' '), '=> active [', player.name, ']')
+    }
+
     doSpotting()
   }
 
