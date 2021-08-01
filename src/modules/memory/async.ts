@@ -63,7 +63,7 @@ export class Memory extends MemorySpec {
     let address = 0
 
     if (typeof startAddress === 'number') {
-      address += startAddress
+      address += await this.read(DataTypes.dword, startAddress)
     }
 
     if (typeof startAddress === 'string') {

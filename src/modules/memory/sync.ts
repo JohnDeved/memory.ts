@@ -66,7 +66,7 @@ export class MemorySync extends MemorySpec {
     let address = 0
 
     if (typeof startAddress === 'number') {
-      address += startAddress
+      address += this.read(DataTypes.dword, startAddress)
     }
 
     if (typeof startAddress === 'string') {
@@ -121,6 +121,7 @@ export class MemorySync extends MemorySpec {
 
   public sendCommand (command: string, expect?: string[], collect?: boolean) {
     this.sendInput({ command, expect, collect })
+    // eslint-disable-next-line no-empty
     while (this.compareBuffer.compare(this.outputBuffer) === 0) {}
 
     const read = this.outputBuffer.toString()

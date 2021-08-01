@@ -7,6 +7,7 @@
     "start": "tsc && node dist",
     "test": "tsc && node dist/test",
     "bench": "tsc && node dist/test/benchmark",
+    "bf4": "tsc && node dist/test/bf4",
     "debug": "tsc && node --inspect-brk dist/test/benchmark"
   },
   "author": "",

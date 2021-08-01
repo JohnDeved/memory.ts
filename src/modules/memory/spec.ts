@@ -1,4 +1,4 @@
-import { DataTypes, IModules, isHexType, isNumericType, TMemory, TMemorySync } from '../dbg/types'
+import { DataTypes, IModules, isHexType, isNumericType, isStringType, TMemory, TMemorySync } from '../dbg/types'
 
 export abstract class MemorySpec {
   public version = 0.1
@@ -13,7 +13,7 @@ export abstract class MemorySpec {
   }
 
   protected _readCommand (type: DataTypes, hexAddress: string): Parameters<MemorySpec['sendCommand']> {
-    return [`d${type} ${hexAddress} L 1`, [hexAddress]]
+    return [`d${type} ${hexAddress} ${isNumericType(type) ? 'L1' : ''}`, [hexAddress]]
   }
 
   protected _readPostProcess (type: DataTypes, hexAddress: string, text: string) {
@@ -22,10 +22,14 @@ export abstract class MemorySpec {
 
     if (isNumericType(type)) {
       if (isHexType(type)) {
-        return parseInt(res.replace(/`/g, ''), 16)
+        return parseInt(res, 16)
       }
 
       return parseFloat(res)
+    }
+
+    if (isStringType(type)) {
+      return res.slice(1, -1)
     }
 
     return res

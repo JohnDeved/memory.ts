@@ -66,8 +66,12 @@ export type TMemorySync = {
   [key in TStringTypes]: string
 }
 
+export function isStringType (type: DataTypes) {
+  return [DataTypes.unicode, DataTypes.ascii].includes(type)
+}
+
 export function isNumericType (type: DataTypes) {
-  return ![DataTypes.unicode, DataTypes.ascii].includes(type)
+  return !isStringType(type)
 }
 
 export function isHexType (type: DataTypes) {
