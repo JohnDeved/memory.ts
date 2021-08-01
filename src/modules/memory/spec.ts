@@ -20,6 +20,10 @@ export abstract class MemorySpec {
     const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
     const [, res] = regex.exec(text) ?? []
 
+    if (!res) {
+      return ''
+    }
+
     if (isNumericType(type)) {
       if (isHexType(type)) {
         return parseInt(res, 16)

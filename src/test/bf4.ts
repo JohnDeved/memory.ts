@@ -1,4 +1,3 @@
-import internal from 'stream'
 import { attachSync } from '..'
 import { DataTypes } from '../modules/dbg/types'
 
@@ -32,12 +31,15 @@ attachSync('bf4.exe').then(process => {
 
     get spotType () {
       const spotTypeAddress = process.address(this.address, 0x0BF0, 0x0050)
+      if (!isValid(spotTypeAddress)) return
       const typeNum = process.read(DataTypes.byte, spotTypeAddress)
-      return SpottingEnum[typeNum] as keyof typeof SpottingEnum
+      return SpottingEnum[typeNum] as keyof typeof SpottingEnum | undefined
     }
 
-    set spotType (value: keyof typeof SpottingEnum) {
+    set spotType (value: keyof typeof SpottingEnum | undefined) {
       const spotTypeAddress = process.address(this.address, 0x0BF0, 0x0050)
+      if (!isValid(spotTypeAddress)) return
+      if (!value) return
       process.write(DataTypes.byte, spotTypeAddress, SpottingEnum[value])
     }
   }
@@ -62,10 +64,8 @@ attachSync('bf4.exe').then(process => {
 
     get solider () {
       const entityAddress = process.address(this.address, 0x14D0)
-
-      if (isValid(entityAddress)) {
-        return new SoliderEntity(entityAddress)
-      }
+      if (!isValid(entityAddress)) return
+      return new SoliderEntity(entityAddress)
     }
   }
 
@@ -102,11 +102,16 @@ attachSync('bf4.exe').then(process => {
   const game = new Game()
 
   setInterval(() => {
+    const playerTeamId = game.playerLocal.teamId
     game.players.forEach((player, i) => {
-      if (player.solider?.spotType && player.solider.spotType !== 'active' && game.playerLocal.teamId !== player.teamId) {
-        console.log('setting spot from', player.solider.spotType, 'to active for', player.name)
-        player.solider.spotType = 'active'
-      }
+      const solider = player.solider
+      if (!solider) return
+
+      const spotType = solider.spotType
+      if (!spotType || spotType === 'active' || playerTeamId === player.teamId) return
+
+      console.log('setting spot from', spotType, 'to active for', player.name)
+      solider.spotType = 'active'
     })
   }, 1000)
 
