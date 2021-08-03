@@ -1,0 +1,10 @@
+{
+    "vehicles.heli.attack": "0x640",
+    "vehicles.tank.ifv.aa": "0x680",
+    "vehicles.tank": "0x660",
+    "vehicles.quadbike": "0x7a0",
+    "vehicles.heli.transport": "0x6c0",
+    "vehicles.jet": "0x640",
+    "vehicles.tank.ifv": "0x680",
+    "vehicles.boat.jetski": "0x6c0"
+}
