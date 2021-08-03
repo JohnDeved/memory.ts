@@ -64,7 +64,7 @@ attachSync('bf4.exe').then(bf4 => {
   class VehicleEntity {
     constructor (public address: number) {}
 
-    private findSpottingOffset (className: string) {
+    private findSpottingOffset (name: string) {
       for (let index = 0x510; index <= 0xD80; index += 0x8) {
         const spottingComponent = bf4.address(this.address, index, 0x0)
         if (!isValidAddress(spottingComponent)) continue
@@ -74,19 +74,19 @@ attachSync('bf4.exe').then(bf4 => {
 
         if (spottingComponentCode === 0x141BB04F0) {
           const offsetHex = index.toString(16)
-          console.log('offset for', className, 'found at', offsetHex)
-          spottingCache[className] = `0x${offsetHex}`
-          writeFileSync(spottingCachePath, JSON.stringify(spottingCache, null, 4))
+          console.log('offset for', name, 'found at', offsetHex)
+          spottingCache[name] = `0x${offsetHex}`
+          writeFileSync(spottingCachePath, JSON.stringify(spottingCache, Object.keys(spottingCache).sort(), 4))
           return offsetHex
         }
       }
     }
 
     private getSpottingOffsetCache () {
-      const className = this.className
-      if (!className) return
-      let offset = spottingCache[className]
-      if (!offset) offset = this.findSpottingOffset(className)
+      const name = this.name
+      if (!name) return
+      let offset = spottingCache[name]
+      if (!offset) offset = this.findSpottingOffset(name)
       return offset
     }
 
@@ -94,6 +94,12 @@ attachSync('bf4.exe').then(bf4 => {
       const vehicleClassNameAddress = bf4.address(this.address, 0x30, 0xF0, 0x0)
       if (!isValidAddress(vehicleClassNameAddress)) return
       return bf4.read(DataTypes.ascii, vehicleClassNameAddress)
+    }
+
+    get name () {
+      const nameAddress = bf4.address(this.address, 0x30, 0x130, 0x0)
+      if (!isValidAddress(nameAddress)) return
+      return bf4.read(DataTypes.ascii, nameAddress)
     }
 
     get spotType () {
@@ -210,7 +216,11 @@ attachSync('bf4.exe').then(bf4 => {
     console.log(spotType.padEnd(11, ' '), '=> active vehicle [', player.name, vehicle.className, ']')
   }
 
-  function doSpotting () {
+  process.on('exit', function () {
+    bf4.detach()
+  })
+
+  while (true) {
     const localTeamId = game.playerLocal.teamId
     const players = game.players
 
@@ -229,13 +239,5 @@ attachSync('bf4.exe').then(bf4 => {
         continue
       }
     }
-
-    doSpotting()
   }
-
-  process.on('exit', function () {
-    bf4.detach()
-  })
-
-  doSpotting()
 })
