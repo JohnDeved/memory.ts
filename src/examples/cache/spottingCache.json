@@ -28,5 +28,9 @@
     "M224": "0x580",
     "RHIB": "0x6c0",
     "SUAV": "0x8a0",
+    "XP4/Gameplay/Gadgets/MKV/MKV": "0xc20",
+    "XP4/Gameplay/Vehicles/MetalStorm": "0x580",
+    "XP4/Gameplay/Vehicles/PodLaunche": "0xaa0",
+    "XP4/Gameplay/Vehicles/Snowmobile": "0x7e0",
     "Z-10w": "0x600"
 }

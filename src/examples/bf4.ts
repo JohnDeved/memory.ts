@@ -80,6 +80,7 @@ attachSync('bf4.exe').then(bf4 => {
           return offsetHex
         }
       }
+      console.log('!!! offset not found for', name)
     }
 
     private getSpottingOffsetCache () {
@@ -213,14 +214,14 @@ attachSync('bf4.exe').then(bf4 => {
     if (!spotType || spotType === 'active') return
 
     vehicle.spotType = 'active'
-    console.log(spotType.padEnd(11, ' '), '=> active vehicle [', player.name, vehicle.className, ']')
+    console.log(spotType.padEnd(11, ' '), '=> active [', player.name, ':', vehicle.className, ']')
   }
 
   process.on('exit', function () {
     bf4.detach()
   })
 
-  while (true) {
+  function doSpotting () {
     const localTeamId = game.playerLocal.teamId
     const players = game.players
 
@@ -239,5 +240,9 @@ attachSync('bf4.exe').then(bf4 => {
         continue
       }
     }
+
+    setTimeout(doSpotting, 1000)
   }
+
+  doSpotting()
 })
