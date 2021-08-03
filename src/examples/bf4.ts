@@ -241,7 +241,7 @@ attachSync('bf4.exe').then(bf4 => {
       }
     }
 
-    setTimeout(doSpotting, 1000)
+    setImmediate(doSpotting)
   }
 
   doSpotting()
