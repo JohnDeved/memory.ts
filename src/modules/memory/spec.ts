@@ -19,7 +19,7 @@ export abstract class MemorySpec {
   protected _readPostProcess (type: DataTypes, hexAddress: string, text: string) {
     if (isStringType(type)) {
       return text.split('\n')
-        .map(s => s.match(/^[\d`]+? {2}"(.+)"$/)?.[1])
+        .map(s => s.match(/^[\w`]+? {2}"(.+)"$/)?.[1])
         .join('')
     }
 
