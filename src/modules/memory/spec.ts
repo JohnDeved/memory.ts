@@ -17,6 +17,12 @@ export abstract class MemorySpec {
   }
 
   protected _readPostProcess (type: DataTypes, hexAddress: string, text: string) {
+    if (isStringType(type)) {
+      return text.split('\n')
+        .map(s => s.match(/^[\d`]+? {2}"(.+)"$/)?.[1])
+        .join('')
+    }
+
     const regex = new RegExp(`${hexAddress}\\s+(.+?)\\s`)
     const [, res] = regex.exec(text) ?? []
 
@@ -30,10 +36,6 @@ export abstract class MemorySpec {
       }
 
       return parseFloat(res)
-    }
-
-    if (isStringType(type)) {
-      return res.slice(1, -1)
     }
 
     return res
