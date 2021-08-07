@@ -73,6 +73,10 @@ attachSync('bf4.exe').then(bf4 => {
         if (!isValidAddress(spottingComponentCode)) continue
 
         if (spottingComponentCode === 0x141BB04F0) {
+          if (this.name !== name) {
+            console.log('!!! vehicle class does not match')
+            return
+          }
           const offsetHex = index.toString(16)
           console.log('offset for', name, 'found at', offsetHex)
           spottingCache[name] = `0x${offsetHex}`
