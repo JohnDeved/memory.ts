@@ -14,7 +14,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/eslint": "^7.28.0",
-    "@types/node": "^16.4.7",
+    "@types/node": "^18.11.17",
     "@typescript-eslint/eslint-plugin": "^4.31.0",
     "@typescript-eslint/parser": "^4.28.5",
     "eslint": "^7.25.0",
